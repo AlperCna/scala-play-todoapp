@@ -1,0 +1,6 @@
+$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot"
+$env:Path="$env:JAVA_HOME\bin;" + $env:Path
+
+java -version
+
+java -jar "C:\Users\Alper\AppData\Roaming\JetBrains\IntelliJIdea2025.1\plugins\Scala\launcher\sbt-launch.jar"
