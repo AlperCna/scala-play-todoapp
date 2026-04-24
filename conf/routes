@@ -6,5 +6,29 @@
 # An example controller showing a sample home page
 GET     /                           controllers.HomeController.index()
 
+
+# Auth Pages
+GET     /login                      controllers.AuthController.loginPage()
+GET     /register                   controllers.AuthController.registerPage()
+
+# Auth API
+POST    /api/auth/login             controllers.AuthController.login()
+POST    /api/auth/register          controllers.AuthController.register()
+POST    /logout                     controllers.AuthController.logout()
+
+# Todo Pages
+GET     /todos                      controllers.TodoPageController.index()
+
+# Todo API
+GET     /api/todos                  controllers.TodoApiController.list()
+POST    /api/todos                  controllers.TodoApiController.create()
+PUT     /api/todos/:id              controllers.TodoApiController.update(id: Long)
+DELETE  /api/todos/:id              controllers.TodoApiController.delete(id: Long)
+POST    /api/todos/:id/toggle       controllers.TodoApiController.toggle(id: Long)
+
+# Admin
+GET     /admin                      controllers.AdminController.dashboard()
+
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
