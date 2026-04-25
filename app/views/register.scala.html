@@ -54,6 +54,19 @@
                 }
             </div>
 
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                >
+                @form("confirmPassword").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
+            </div>
+
             <button type="submit" class="btn">Register</button>
         </form>
 

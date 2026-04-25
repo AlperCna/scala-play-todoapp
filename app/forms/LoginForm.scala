@@ -12,8 +12,8 @@ object LoginForm {
 
   val form: Form[LoginForm] = Form(
     mapping(
-      "email" -> nonEmptyText,
-      "password" -> nonEmptyText
+      "email" -> email,
+      "password" -> nonEmptyText(minLength = 6)
     )(LoginForm.apply)(LoginForm.unapply)
   )
 }

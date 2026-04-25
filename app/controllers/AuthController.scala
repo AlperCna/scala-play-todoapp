@@ -2,42 +2,33 @@ package controllers
 
 import dtos._
 import forms._
+import services.AuthService
+
 import javax.inject._
 import play.api.mvc._
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AuthController @Inject()(cc: ControllerComponents)
+class AuthController @Inject()(
+                                cc: ControllerComponents,
+                                authService: AuthService
+                              )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
   def loginPage = Action { implicit request =>
-    Ok(views.html.login(forms.LoginForm.form))
+    Ok(views.html.login(LoginForm.form))
   }
 
   def registerPage = Action { implicit request =>
-    Ok(views.html.register(forms.RegisterForm.form))
+    Ok(views.html.register(RegisterForm.form))
   }
 
-  def login = Action { implicit request =>
-    LoginForm.form.bindFromRequest().fold(
-      formWithErrors => {
-        BadRequest(views.html.login(formWithErrors))
-      },
-      data => {
-        val dto = LoginRequest(
-          email = data.email,
-          password = data.password
-        )
-
-        Redirect(routes.TodoController.index())
-          .flashing("success" -> s"Login success for ${dto.email}")
-      }
-    )
-  }
-
-  def register = Action { implicit request =>
+  def register = Action.async { implicit request =>
     RegisterForm.form.bindFromRequest().fold(
       formWithErrors => {
-        BadRequest(views.html.register(formWithErrors))
+        Future.successful(
+          BadRequest(views.html.register(formWithErrors))
+        )
       },
       data => {
         val dto = RegisterRequest(
@@ -46,13 +37,68 @@ class AuthController @Inject()(cc: ControllerComponents)
           password = data.password
         )
 
-        Redirect(routes.AuthController.loginPage())
-          .flashing("success" -> "Register successful. Please login.")
+        authService.register(dto).map { _ =>
+          Redirect(routes.AuthController.loginPage())
+            .flashing("success" -> "Register successful. Please login.")
+        }.recover {
+          case ex: RuntimeException =>
+            val formWithError =
+              RegisterForm.form
+                .fill(data)
+                .withGlobalError(ex.getMessage)
+
+            BadRequest(views.html.register(formWithError))
+
+          case _ =>
+            val formWithError =
+              RegisterForm.form
+                .fill(data)
+                .withGlobalError("Register failed. Please try again.")
+
+            BadRequest(views.html.register(formWithError))
+        }
+      }
+    )
+  }
+
+  def login = Action.async { implicit request =>
+    LoginForm.form.bindFromRequest().fold(
+      formWithErrors => {
+        Future.successful(
+          BadRequest(views.html.login(formWithErrors))
+        )
+      },
+      data => {
+        val dto = LoginRequest(
+          email = data.email,
+          password = data.password
+        )
+
+        authService.login(dto).map {
+          case Some(user) =>
+            Redirect(routes.TodoController.index())
+              .withSession(
+                "userId" -> user.id.toString,
+                "username" -> user.username,
+                "role" -> user.role
+              )
+              .flashing("success" -> s"Welcome, ${user.username}")
+
+          case None =>
+            val formWithError =
+              LoginForm.form
+                .fill(data)
+                .withGlobalError("Email or password is incorrect.")
+
+            BadRequest(views.html.login(formWithError))
+        }
       }
     )
   }
 
   def logout = Action {
-    Ok("Logout will be implemented here")
+    Redirect(routes.AuthController.loginPage())
+      .withNewSession
+      .flashing("success" -> "Logout successful.")
   }
 }

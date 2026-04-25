@@ -4,6 +4,13 @@
     <section class="todo-page">
         <h1>Todo List</h1>
 
+        <form method="post" action="@routes.AuthController.logout()" class="logout-form">
+            @helper.CSRF.formField
+            <button type="submit">Logout</button>
+        </form>
+
+        <br>
+
         <form method="post" action="@routes.TodoController.create()" class="todo-form">
             @helper.CSRF.formField
 
