@@ -9,8 +9,14 @@ import play.api.mvc._
 class TodoController @Inject()(cc: ControllerComponents)
   extends AbstractController(cc) {
 
-  def index = Action {
-    Ok("SSR Todo list page will be rendered here")
+  def index = Action { implicit request =>
+    val todos = Seq(
+      "Scala öğren",
+      "Play Framework çalış",
+      "Todo App bitir"
+    )
+
+    Ok(views.html.todos(todos))
   }
 
   def create = Action { implicit request =>
@@ -30,8 +36,16 @@ class TodoController @Inject()(cc: ControllerComponents)
     )
   }
 
-  def edit(id: String) = Action {
-    Ok(s"Todo edit page will be rendered for id: $id")
+  def edit(id: String) = Action { implicit request =>
+    val form = TodoUpdateForm.form.fill(
+      TodoUpdateForm(
+        title = "Sample todo",
+        description = Some("Sample description"),
+        isCompleted = false
+      )
+    )
+
+    Ok(views.html.todoEdit(id, form)(request, request.flash))
   }
 
   def update(id: String) = Action { implicit request =>

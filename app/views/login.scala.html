@@ -1,0 +1,51 @@
+@(form: play.api.data.Form[forms.LoginForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Login") {
+    <section class="auth-page">
+        <h1>Login</h1>
+
+        @if(form.hasGlobalErrors) {
+            <div class="alert alert-error">
+            @form.globalErrors.map(_.message).mkString(", ")
+            </div>
+        }
+
+        <form method="post" action="@routes.AuthController.login()" class="auth-form">
+            @helper.CSRF.formField
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input
+                type="email"
+                id="email"
+                name="email"
+                value="@form("email").value.getOrElse("")"
+                required
+                >
+                @form("email").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                >
+                @form("password").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
+            </div>
+
+            <button type="submit" class="btn">Login</button>
+        </form>
+
+        <p class="auth-link">
+            Hesabın yok mu?
+            <a href="@routes.AuthController.registerPage()">Register</a>
+        </p>
+    </section>
+}

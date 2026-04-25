@@ -1,0 +1,42 @@
+@(id: String, form: play.api.data.Form[forms.TodoUpdateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Edit Todo") {
+    <section class="todo-edit-page">
+        <h1>Edit Todo</h1>
+
+        <form method="post" action="@routes.TodoController.update(id)" class="todo-form">
+            @helper.CSRF.formField
+
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input
+                type="text"
+                id="title"
+                name="title"
+                value="@form("title").value.getOrElse("")"
+                required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description">@form("description").value.getOrElse("")</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input
+                    type="checkbox"
+                    name="isCompleted"
+                    value="true"
+                    @if(form("isCompleted").value.contains("true")) { checked }
+                    >
+                    Completed
+                </label>
+            </div>
+
+            <button type="submit">Save</button>
+            <a href="@routes.TodoController.index()">Cancel</a>
+        </form>
+    </section>
+}

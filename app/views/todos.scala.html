@@ -1,0 +1,20 @@
+@(todos: Seq[String])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Todos") {
+    <section class="todo-page">
+        <h1>Todo List</h1>
+
+        <form method="post" action="@routes.TodoController.create()" class="todo-form">
+            @helper.CSRF.formField
+
+            <input type="text" name="title" placeholder="Yeni todo..." required>
+            <button type="submit">Ekle</button>
+        </form>
+
+        <ul class="todo-list">
+        @for(todo <- todos) {
+            <li>@todo</li>
+        }
+        </ul>
+    </section>
+}

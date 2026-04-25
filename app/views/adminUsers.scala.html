@@ -1,0 +1,22 @@
+@(users: Seq[String])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Admin Users") {
+    <section class="admin-users-page">
+        <h1>Admin Users</h1>
+
+        <table border="1" cellpadding="6">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                </tr>
+            </thead>
+            <tbody>
+            @for(user <- users) {
+                <tr>
+                    <td>@user</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+}

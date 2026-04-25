@@ -9,18 +9,18 @@ import play.api.mvc._
 class AuthController @Inject()(cc: ControllerComponents)
   extends AbstractController(cc) {
 
-  def loginPage = Action {
-    Ok("Login page will be rendered here")
+  def loginPage = Action { implicit request =>
+    Ok(views.html.login(forms.LoginForm.form))
   }
 
-  def registerPage = Action {
-    Ok("Register page will be rendered here")
+  def registerPage = Action { implicit request =>
+    Ok(views.html.register(forms.RegisterForm.form))
   }
 
   def login = Action { implicit request =>
     LoginForm.form.bindFromRequest().fold(
       formWithErrors => {
-        BadRequest("Login form error")
+        BadRequest(views.html.login(formWithErrors))
       },
       data => {
         val dto = LoginRequest(
@@ -28,7 +28,8 @@ class AuthController @Inject()(cc: ControllerComponents)
           password = data.password
         )
 
-        Ok(s"Login success for ${dto.email}")
+        Redirect(routes.TodoController.index())
+          .flashing("success" -> s"Login success for ${dto.email}")
       }
     )
   }
@@ -36,7 +37,7 @@ class AuthController @Inject()(cc: ControllerComponents)
   def register = Action { implicit request =>
     RegisterForm.form.bindFromRequest().fold(
       formWithErrors => {
-        BadRequest("Register form error")
+        BadRequest(views.html.register(formWithErrors))
       },
       data => {
         val dto = RegisterRequest(
@@ -45,7 +46,8 @@ class AuthController @Inject()(cc: ControllerComponents)
           password = data.password
         )
 
-        Ok(s"Register success for ${dto.email}")
+        Redirect(routes.AuthController.loginPage())
+          .flashing("success" -> "Register successful. Please login.")
       }
     )
   }

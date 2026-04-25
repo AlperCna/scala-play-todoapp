@@ -1,0 +1,25 @@
+@(userCount: Int, todoCount: Int, activeUserCount: Int)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Admin Dashboard") {
+    <section class="admin-page">
+        <h1>Admin Dashboard</h1>
+
+        <div class="stats">
+            <div>
+                <strong>Total Users:</strong> @userCount
+            </div>
+
+            <div>
+                <strong>Total Todos:</strong> @todoCount
+            </div>
+
+            <div>
+                <strong>Active Users:</strong> @activeUserCount
+            </div>
+        </div>
+
+        <p>
+            <a href="@routes.AdminController.dashboard()">Dashboard</a>
+        </p>
+    </section>
+}
