@@ -1,15 +1,8 @@
-@(todos: Seq[String])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(todos: Seq[dtos.TodoResponse])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Todos") {
     <section class="todo-page">
         <h1>Todo List</h1>
-
-        <form method="post" action="@routes.AuthController.logout()" class="logout-form">
-            @helper.CSRF.formField
-            <button type="submit">Logout</button>
-        </form>
-
-        <br>
 
         <form method="post" action="@routes.TodoController.create()" class="todo-form">
             @helper.CSRF.formField
@@ -20,7 +13,25 @@
 
         <ul class="todo-list">
         @for(todo <- todos) {
-            <li>@todo</li>
+            <li>
+                @if(todo.isCompleted) {
+                    <s>@todo.title</s>
+                } else {
+                    @todo.title
+                }
+
+            <form method="post" action="@routes.TodoController.toggle(todo.id.toString)" style="display:inline;">
+                @helper.CSRF.formField
+            <button type="submit">Toggle</button>
+            </form>
+
+            <a href="@routes.TodoController.edit(todo.id.toString)">Edit</a>
+
+            <form method="post" action="@routes.TodoController.delete(todo.id.toString)" style="display:inline;">
+                @helper.CSRF.formField
+            <button type="submit">Delete</button>
+            </form>
+            </li>
         }
         </ul>
     </section>

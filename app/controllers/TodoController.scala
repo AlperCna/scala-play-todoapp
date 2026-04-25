@@ -2,106 +2,213 @@ package controllers
 
 import dtos._
 import forms._
+import services.TodoService
+
+import java.util.UUID
 import javax.inject._
 import play.api.mvc._
 
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
+
 @Singleton
-class TodoController @Inject()(cc: ControllerComponents)
+class TodoController @Inject()(
+                                cc: ControllerComponents,
+                                todoService: TodoService
+                              )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
-  private def isLoggedIn(request: RequestHeader): Boolean = {
-    request.session.get("userId").isDefined
-  }
-
-  def index() = Action { implicit request =>
-    if (isLoggedIn(request)) {
-      val todos = List("Scala öğren", "Play Framework çalış", "Todo App bitir")
-      Ok(views.html.todos(todos))
-    } else {
-      Redirect(routes.AuthController.loginPage())
-        .flashing("error" -> "Lütfen önce giriş yapın.")
+  private def getCurrentUserId(request: RequestHeader): Option[UUID] = {
+    request.session.get("userId").flatMap { id =>
+      Try(UUID.fromString(id)).toOption
     }
   }
 
-  def create = Action { implicit request =>
-    if (!isLoggedIn(request)) {
-      Redirect(routes.AuthController.loginPage())
-        .flashing("error" -> "Lütfen önce giriş yapın.")
-    } else {
-      TodoCreateForm.form.bindFromRequest().fold(
-        formWithErrors => {
-          BadRequest("Todo create form error")
-        },
-        data => {
-          val dto = TodoCreateRequest(
-            title = data.title,
-            description = data.description
-          )
-
-          Redirect(routes.TodoController.index())
-            .flashing("success" -> s"Todo created: ${dto.title}")
+  def index() = Action.async { implicit request =>
+    getCurrentUserId(request) match {
+      case Some(userId) =>
+        todoService.getTodos(userId).map { todos =>
+          Ok(views.html.todos(todos))
         }
-      )
-    }
-  }
 
-  def edit(id: String) = Action { implicit request =>
-    if (!isLoggedIn(request)) {
-      Redirect(routes.AuthController.loginPage())
-        .flashing("error" -> "Lütfen önce giriş yapın.")
-    } else {
-      val form = TodoUpdateForm.form.fill(
-        TodoUpdateForm(
-          title = "Sample todo",
-          description = Some("Sample description"),
-          isCompleted = false
+      case None =>
+        Future.successful(
+          Redirect(routes.AuthController.loginPage())
+            .flashing("error" -> "Lütfen önce giriş yapın.")
         )
-      )
-
-      Ok(views.html.todoEdit(id, form))
     }
   }
 
-  def update(id: String) = Action { implicit request =>
-    if (!isLoggedIn(request)) {
-      Redirect(routes.AuthController.loginPage())
-        .flashing("error" -> "Lütfen önce giriş yapın.")
-    } else {
-      TodoUpdateForm.form.bindFromRequest().fold(
-        formWithErrors => {
-          BadRequest("Todo update form error")
-        },
-        data => {
-          val dto = TodoUpdateRequest(
-            title = data.title,
-            description = data.description,
-            isCompleted = data.isCompleted
-          )
+  def create = Action.async { implicit request =>
+    getCurrentUserId(request) match {
+      case Some(userId) =>
+        TodoCreateForm.form.bindFromRequest().fold(
+          formWithErrors => {
+            Future.successful(
+              Redirect(routes.TodoController.index())
+                .flashing("error" -> "Todo oluşturulamadı. Lütfen formu kontrol edin.")
+            )
+          },
+          data => {
+            val dto = TodoCreateRequest(
+              title = data.title,
+              description = data.description
+            )
 
-          Redirect(routes.TodoController.index())
-            .flashing("success" -> s"Todo updated: ${dto.title}")
+            todoService.createTodo(userId, dto).map { createdTodo =>
+              Redirect(routes.TodoController.index())
+                .flashing("success" -> s"Todo created: ${createdTodo.title}")
+            }
+          }
+        )
+
+      case None =>
+        Future.successful(
+          Redirect(routes.AuthController.loginPage())
+            .flashing("error" -> "Lütfen önce giriş yapın.")
+        )
+    }
+  }
+
+  def edit(id: String) = Action.async { implicit request =>
+    getCurrentUserId(request) match {
+      case Some(userId) =>
+        Try(UUID.fromString(id)).toOption match {
+          case Some(todoId) =>
+            todoService.getTodoForEdit(userId, todoId).map {
+              case Some(todo) =>
+                val form = TodoUpdateForm.form.fill(
+                  TodoUpdateForm(
+                    title = todo.title,
+                    description = None,
+                    isCompleted = todo.isCompleted
+                  )
+                )
+
+                Ok(views.html.todoEdit(id, form))
+
+              case None =>
+                Redirect(routes.TodoController.index())
+                  .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+            }
+
+          case None =>
+            Future.successful(
+              Redirect(routes.TodoController.index())
+                .flashing("error" -> "Geçersiz todo id.")
+            )
         }
-      )
+
+      case None =>
+        Future.successful(
+          Redirect(routes.AuthController.loginPage())
+            .flashing("error" -> "Lütfen önce giriş yapın.")
+        )
     }
   }
 
-  def delete(id: String) = Action { implicit request =>
-    if (!isLoggedIn(request)) {
-      Redirect(routes.AuthController.loginPage())
-        .flashing("error" -> "Lütfen önce giriş yapın.")
-    } else {
-      Redirect(routes.TodoController.index())
-        .flashing("success" -> s"Todo deleted: $id")
+  def update(id: String) = Action.async { implicit request =>
+    getCurrentUserId(request) match {
+      case Some(userId) =>
+        Try(UUID.fromString(id)).toOption match {
+          case Some(todoId) =>
+            TodoUpdateForm.form.bindFromRequest().fold(
+              formWithErrors => {
+                Future.successful(
+                  BadRequest(views.html.todoEdit(id, formWithErrors))
+                )
+              },
+              data => {
+                val dto = TodoUpdateRequest(
+                  title = data.title,
+                  description = data.description,
+                  isCompleted = data.isCompleted
+                )
+
+                todoService.updateTodo(userId, todoId, dto).map {
+                  case Some(updatedTodo) =>
+                    Redirect(routes.TodoController.index())
+                      .flashing("success" -> s"Todo updated: ${updatedTodo.title}")
+
+                  case None =>
+                    Redirect(routes.TodoController.index())
+                      .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                }
+              }
+            )
+
+          case None =>
+            Future.successful(
+              Redirect(routes.TodoController.index())
+                .flashing("error" -> "Geçersiz todo id.")
+            )
+        }
+
+      case None =>
+        Future.successful(
+          Redirect(routes.AuthController.loginPage())
+            .flashing("error" -> "Lütfen önce giriş yapın.")
+        )
     }
   }
 
-  def toggle(id: String) = Action { implicit request =>
-    if (!isLoggedIn(request)) {
-      Redirect(routes.AuthController.loginPage())
-        .flashing("error" -> "Lütfen önce giriş yapın.")
-    } else {
-      Redirect(routes.TodoController.index())
-        .flashing("success" -> s"Todo toggled: $id")
+  def delete(id: String) = Action.async { implicit request =>
+    getCurrentUserId(request) match {
+      case Some(userId) =>
+        Try(UUID.fromString(id)).toOption match {
+          case Some(todoId) =>
+            todoService.deleteTodo(userId, todoId).map {
+              case true =>
+                Redirect(routes.TodoController.index())
+                  .flashing("success" -> "Todo deleted.")
+
+              case false =>
+                Redirect(routes.TodoController.index())
+                  .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+            }
+
+          case None =>
+            Future.successful(
+              Redirect(routes.TodoController.index())
+                .flashing("error" -> "Geçersiz todo id.")
+            )
+        }
+
+      case None =>
+        Future.successful(
+          Redirect(routes.AuthController.loginPage())
+            .flashing("error" -> "Lütfen önce giriş yapın.")
+        )
+    }
+  }
+
+  def toggle(id: String) = Action.async { implicit request =>
+    getCurrentUserId(request) match {
+      case Some(userId) =>
+        Try(UUID.fromString(id)).toOption match {
+          case Some(todoId) =>
+            todoService.toggleTodo(userId, todoId).map {
+              case Some(_) =>
+                Redirect(routes.TodoController.index())
+                  .flashing("success" -> "Todo status updated.")
+
+              case None =>
+                Redirect(routes.TodoController.index())
+                  .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+            }
+
+          case None =>
+            Future.successful(
+              Redirect(routes.TodoController.index())
+                .flashing("error" -> "Geçersiz todo id.")
+            )
+        }
+
+      case None =>
+        Future.successful(
+          Redirect(routes.AuthController.loginPage())
+            .flashing("error" -> "Lütfen önce giriş yapın.")
+        )
     }
   }
 }
