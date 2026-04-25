@@ -1,4 +1,9 @@
 @(title: String)(content: Html)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@isLoggedIn = @{ request.session.get("userId").isDefined }
+@username = @{ request.session.get("username").getOrElse("") }
+@role = @{ request.session.get("role").getOrElse("USER") }
+
 <!DOCTYPE html>
 <html lang="tr">
     <head>
@@ -18,10 +23,23 @@
             </div>
 
             <nav class="navbar-links">
+            @if(isLoggedIn) {
                 <a href="@routes.TodoController.index()">Todos</a>
+
+                @if(role == "ADMIN") {
+                    <a href="@routes.AdminController.dashboard()">Admin</a>
+                }
+
+                <span>Merhaba, @username</span>
+
+                <form method="post" action="@routes.AuthController.logout()" style="display:inline;">
+                    @helper.CSRF.formField
+                    <button type="submit">Logout</button>
+                </form>
+            } else {
                 <a href="@routes.AuthController.loginPage()">Login</a>
                 <a href="@routes.AuthController.registerPage()">Register</a>
-                <a href="@routes.AdminController.dashboard()">Admin</a>
+            }
             </nav>
         </header>
 
