@@ -1,5 +1,7 @@
 package controllers
 
+import dtos._
+import forms._
 import javax.inject._
 import play.api.mvc._
 
@@ -15,12 +17,37 @@ class AuthController @Inject()(cc: ControllerComponents)
     Ok("Register page will be rendered here")
   }
 
-  def login = Action {
-    Ok("Login API will be implemented here")
+  def login = Action { implicit request =>
+    LoginForm.form.bindFromRequest().fold(
+      formWithErrors => {
+        BadRequest("Login form error")
+      },
+      data => {
+        val dto = LoginRequest(
+          email = data.email,
+          password = data.password
+        )
+
+        Ok(s"Login success for ${dto.email}")
+      }
+    )
   }
 
-  def register = Action {
-    Ok("Register API will be implemented here")
+  def register = Action { implicit request =>
+    RegisterForm.form.bindFromRequest().fold(
+      formWithErrors => {
+        BadRequest("Register form error")
+      },
+      data => {
+        val dto = RegisterRequest(
+          username = data.username,
+          email = data.email,
+          password = data.password
+        )
+
+        Ok(s"Register success for ${dto.email}")
+      }
+    )
   }
 
   def logout = Action {

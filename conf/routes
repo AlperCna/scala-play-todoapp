@@ -3,32 +3,28 @@
 # https://www.playframework.com/documentation/latest/ScalaRouting
 # ~~~~
 
-# An example controller showing a sample home page
+# Home
 GET     /                           controllers.HomeController.index()
-
 
 # Auth Pages
 GET     /login                      controllers.AuthController.loginPage()
 GET     /register                   controllers.AuthController.registerPage()
 
-# Auth API
-POST    /api/auth/login             controllers.AuthController.login()
-POST    /api/auth/register          controllers.AuthController.register()
+# Auth Form Submit
+POST    /login                      controllers.AuthController.login()
+POST    /register                   controllers.AuthController.register()
 POST    /logout                     controllers.AuthController.logout()
 
-# Todo Pages
-GET     /todos                      controllers.TodoPageController.index()
-
-# Todo API
-GET     /api/todos                  controllers.TodoApiController.list()
-POST    /api/todos                  controllers.TodoApiController.create()
-PUT     /api/todos/:id              controllers.TodoApiController.update(id: Long)
-DELETE  /api/todos/:id              controllers.TodoApiController.delete(id: Long)
-POST    /api/todos/:id/toggle       controllers.TodoApiController.toggle(id: Long)
+# Todo SSR
+GET     /todos                      controllers.TodoController.index()
+POST    /todos/create               controllers.TodoController.create()
+GET     /todos/:id/edit             controllers.TodoController.edit(id: String)
+POST    /todos/:id/update           controllers.TodoController.update(id: String)
+POST    /todos/:id/delete           controllers.TodoController.delete(id: String)
+POST    /todos/:id/toggle           controllers.TodoController.toggle(id: String)
 
 # Admin
 GET     /admin                      controllers.AdminController.dashboard()
 
-
-# Map static resources from the /public folder to the /assets URL path
+# Static assets
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

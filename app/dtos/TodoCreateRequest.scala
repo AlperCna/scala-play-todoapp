@@ -1,5 +1,6 @@
 package dtos
 
 case class TodoCreateRequest(
-                              title: String
+                              title: String,
+                              description: Option[String]
                             )
