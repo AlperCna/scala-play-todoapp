@@ -7,11 +7,10 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.13.18"
 
-libraryDependencies += guice
-libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test
-
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "com.alper.todo.controllers._"
-
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "com.alper.todo.binders._"
+libraryDependencies ++= Seq(
+  guice,
+  jdbc,
+  evolutions,
+  "com.microsoft.sqlserver" % "mssql-jdbc" % "12.8.1.jre11",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test
+)
