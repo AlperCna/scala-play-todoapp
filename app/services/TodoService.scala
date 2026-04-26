@@ -1,13 +1,21 @@
 package services
 
-import dtos.{TodoCreateRequest, TodoResponse, TodoUpdateRequest}
+import dtos.{TodoCreateRequest, TodoPageResponse, TodoResponse, TodoUpdateRequest}
 
 import java.util.UUID
 import scala.concurrent.Future
 
 trait TodoService {
 
-  def getTodos(userId: UUID): Future[Seq[TodoResponse]]
+  def getTodos(userId: UUID, status: String, search: String): Future[Seq[TodoResponse]]
+
+  def getTodosPaged(
+                     userId: UUID,
+                     status: String,
+                     search: String,
+                     page: Int,
+                     pageSize: Int
+                   ): Future[TodoPageResponse]
 
   def getTodoForEdit(userId: UUID, todoId: UUID): Future[Option[TodoResponse]]
 

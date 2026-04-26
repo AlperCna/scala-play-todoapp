@@ -163,4 +163,203 @@ class TodoRepositoryImpl @Inject()(
       stmt.executeUpdate() > 0
     }
   }
+
+  override def findByUserIdWithStatus(userId: UUID, status: String): Future[Seq[Todo]] = Future {
+    db.withConnection { conn =>
+
+      val statusCondition = status match {
+        case "active" => "AND is_completed = 0"
+        case "completed" => "AND is_completed = 1"
+        case _ => ""
+      }
+
+      val sql =
+        s"""
+           |SELECT id, user_id, title, description, is_completed,
+           |       created_at, updated_at, deleted_at, is_deleted
+           |FROM todos
+           |WHERE user_id = ? AND is_deleted = 0
+           |$statusCondition
+           |ORDER BY created_at DESC
+           |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, userId.toString)
+
+      val rs = stmt.executeQuery()
+      val todos = scala.collection.mutable.ListBuffer[Todo]()
+
+      while (rs.next()) {
+        todos += mapTodo(rs)
+      }
+
+      todos.toSeq
+    }
+  }
+
+
+  override def findByUserIdWithFilters(
+                                        userId: UUID,
+                                        status: String,
+                                        search: String
+                                      ): Future[Seq[Todo]] = Future {
+    db.withConnection { conn =>
+
+      val statusCondition = status match {
+        case "active" => "AND is_completed = 0"
+        case "completed" => "AND is_completed = 1"
+        case _ => ""
+      }
+
+      val hasSearch = search.trim.nonEmpty
+
+      val searchCondition =
+        if (hasSearch) {
+          "AND (title LIKE ? OR description LIKE ?)"
+        } else {
+          ""
+        }
+
+      val sql =
+        s"""
+           |SELECT id, user_id, title, description, is_completed,
+           |       created_at, updated_at, deleted_at, is_deleted
+           |FROM todos
+           |WHERE user_id = ? AND is_deleted = 0
+           |$statusCondition
+           |$searchCondition
+           |ORDER BY created_at DESC
+           |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+
+      stmt.setString(1, userId.toString)
+
+      if (hasSearch) {
+        val keyword = s"%${search.trim}%"
+        stmt.setString(2, keyword)
+        stmt.setString(3, keyword)
+      }
+
+      val rs = stmt.executeQuery()
+      val todos = scala.collection.mutable.ListBuffer[Todo]()
+
+      while (rs.next()) {
+        todos += mapTodo(rs)
+      }
+
+      todos.toSeq
+    }
+  }
+
+  override def findByUserIdWithFiltersPaged(
+                                             userId: UUID,
+                                             status: String,
+                                             search: String,
+                                             page: Int,
+                                             pageSize: Int
+                                           ): Future[Seq[Todo]] = Future {
+    db.withConnection { conn =>
+
+      val statusCondition = status match {
+        case "active" => "AND is_completed = 0"
+        case "completed" => "AND is_completed = 1"
+        case _ => ""
+      }
+
+      val hasSearch = search.trim.nonEmpty
+
+      val searchCondition =
+        if (hasSearch) {
+          "AND (title LIKE ? OR description LIKE ?)"
+        } else {
+          ""
+        }
+
+      val offset = (page - 1) * pageSize
+
+      val sql =
+        s"""
+           |SELECT id, user_id, title, description, is_completed,
+           |       created_at, updated_at, deleted_at, is_deleted
+           |FROM todos
+           |WHERE user_id = ? AND is_deleted = 0
+           |$statusCondition
+           |$searchCondition
+           |ORDER BY created_at DESC
+           |OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+           |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+
+      stmt.setString(1, userId.toString)
+
+      if (hasSearch) {
+        val keyword = s"%${search.trim}%"
+        stmt.setString(2, keyword)
+        stmt.setString(3, keyword)
+        stmt.setInt(4, offset)
+        stmt.setInt(5, pageSize)
+      } else {
+        stmt.setInt(2, offset)
+        stmt.setInt(3, pageSize)
+      }
+
+      val rs = stmt.executeQuery()
+      val todos = scala.collection.mutable.ListBuffer[Todo]()
+
+      while (rs.next()) {
+        todos += mapTodo(rs)
+      }
+
+      todos.toSeq
+    }
+  }
+
+  override def countByUserIdWithFilters(
+                                         userId: UUID,
+                                         status: String,
+                                         search: String
+                                       ): Future[Int] = Future {
+    db.withConnection { conn =>
+
+      val statusCondition = status match {
+        case "active" => "AND is_completed = 0"
+        case "completed" => "AND is_completed = 1"
+        case _ => ""
+      }
+
+      val hasSearch = search.trim.nonEmpty
+
+      val searchCondition =
+        if (hasSearch) {
+          "AND (title LIKE ? OR description LIKE ?)"
+        } else {
+          ""
+        }
+
+      val sql =
+        s"""
+           |SELECT COUNT(*) AS total
+           |FROM todos
+           |WHERE user_id = ? AND is_deleted = 0
+           |$statusCondition
+           |$searchCondition
+           |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+
+      stmt.setString(1, userId.toString)
+
+      if (hasSearch) {
+        val keyword = s"%${search.trim}%"
+        stmt.setString(2, keyword)
+        stmt.setString(3, keyword)
+      }
+
+      val rs = stmt.executeQuery()
+
+      if (rs.next()) rs.getInt("total") else 0
+    }
+  }
 }

@@ -1,8 +1,37 @@
-@(todos: Seq[dtos.TodoResponse])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(todoPage: dtos.TodoPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Todos") {
     <section class="todo-page">
         <h1>Todo List</h1>
+
+        <div class="todo-filters">
+            <a href="@routes.TodoController.index()?status=all&search=@todoPage.search&page=1">All</a>
+            <a href="@routes.TodoController.index()?status=active&search=@todoPage.search&page=1">Active</a>
+            <a href="@routes.TodoController.index()?status=completed&search=@todoPage.search&page=1">Completed</a>
+        </div>
+
+        <form method="get" action="@routes.TodoController.index()" class="search-form">
+            <input
+            type="text"
+            name="search"
+            placeholder="Todo ara..."
+            value="@todoPage.search"
+            >
+
+            <input
+            type="hidden"
+            name="status"
+            value="@todoPage.status"
+            >
+
+            <input
+            type="hidden"
+            name="page"
+            value="1"
+            >
+
+            <button type="submit">Ara</button>
+        </form>
 
         <form method="post" action="@routes.TodoController.create()" class="todo-form">
             @helper.CSRF.formField
@@ -11,28 +40,53 @@
             <button type="submit">Ekle</button>
         </form>
 
-        <ul class="todo-list">
-        @for(todo <- todos) {
-            <li>
-                @if(todo.isCompleted) {
-                    <s>@todo.title</s>
-                } else {
-                    @todo.title
-                }
+        @if(todoPage.todos.isEmpty) {
+            <p class="empty-message">
+                Henüz todo bulunamadı. Yeni todo ekleyebilir veya filtreleri değiştirebilirsin.
+            </p>
+        } else {
+            <ul class="todo-list">
+            @for(todo <- todoPage.todos) {
+                <li>
+                    @if(todo.isCompleted) {
+                        <s>@todo.title</s>
+                    } else {
+                        @todo.title
+                    }
 
-            <form method="post" action="@routes.TodoController.toggle(todo.id.toString)" style="display:inline;">
-                @helper.CSRF.formField
-            <button type="submit">Toggle</button>
-            </form>
+                <form method="post" action="@routes.TodoController.toggle(todo.id.toString)" style="display:inline;">
+                    @helper.CSRF.formField
+                <button type="submit">Toggle</button>
+                </form>
 
-            <a href="@routes.TodoController.edit(todo.id.toString)">Edit</a>
+                <a href="@routes.TodoController.edit(todo.id.toString)">Edit</a>
 
-            <form method="post" action="@routes.TodoController.delete(todo.id.toString)" style="display:inline;">
-                @helper.CSRF.formField
-            <button type="submit">Delete</button>
-            </form>
-            </li>
+                <form method="post" action="@routes.TodoController.delete(todo.id.toString)" style="display:inline;">
+                    @helper.CSRF.formField
+                <button type="submit">Delete</button>
+                </form>
+                </li>
+            }
+            </ul>
         }
-        </ul>
+
+        <div class="pagination">
+            <p>
+                Page @todoPage.currentPage / @todoPage.totalPages
+                - Total: @todoPage.totalItems
+            </p>
+
+            @if(todoPage.currentPage > 1) {
+                <a href="@routes.TodoController.index()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage - 1)">
+                    Previous
+                </a>
+            }
+
+            @if(todoPage.currentPage < todoPage.totalPages) {
+                <a href="@routes.TodoController.index()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage + 1)">
+                    Next
+                </a>
+            }
+        </div>
     </section>
 }

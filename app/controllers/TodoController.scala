@@ -27,8 +27,17 @@ class TodoController @Inject()(
   def index() = Action.async { implicit request =>
     getCurrentUserId(request) match {
       case Some(userId) =>
-        todoService.getTodos(userId).map { todos =>
-          Ok(views.html.todos(todos))
+        val status = request.getQueryString("status").getOrElse("all")
+        val search = request.getQueryString("search").getOrElse("")
+
+        val page = request.getQueryString("page")
+          .flatMap(value => Try(value.toInt).toOption)
+          .getOrElse(1)
+
+        val pageSize = 5
+
+        todoService.getTodosPaged(userId, status, search, page, pageSize).map { todoPage =>
+          Ok(views.html.todos(todoPage))
         }
 
       case None =>

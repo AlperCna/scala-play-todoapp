@@ -1,6 +1,6 @@
 package services
 
-import dtos.{TodoCreateRequest, TodoResponse, TodoUpdateRequest}
+import dtos.{TodoCreateRequest, TodoResponse, TodoUpdateRequest, TodoPageResponse}
 import models.Todo
 import repositories.TodoRepository
 
@@ -22,10 +22,17 @@ class TodoServiceImpl @Inject()(
     )
   }
 
-  override def getTodos(userId: UUID): Future[Seq[TodoResponse]] = {
-    todoRepository.findByUserId(userId).map { todos =>
-      todos.map(toResponse)
-    }
+  override def getTodos(userId: UUID, status: String, search: String): Future[Seq[TodoResponse]] = {
+    val normalizedStatus =
+      if (Set("all", "active", "completed").contains(status)) status else "all"
+
+    val normalizedSearch = search.trim
+
+    todoRepository
+      .findByUserIdWithFilters(userId, normalizedStatus, normalizedSearch)
+      .map { todos =>
+        todos.map(toResponse)
+      }
   }
 
   override def getTodoForEdit(
@@ -104,6 +111,55 @@ class TodoServiceImpl @Inject()(
 
       case None =>
         Future.successful(None)
+    }
+  }
+  override def getTodosPaged(
+                              userId: UUID,
+                              status: String,
+                              search: String,
+                              page: Int,
+                              pageSize: Int
+                            ): Future[TodoPageResponse] = {
+
+    val normalizedStatus =
+      if (Set("all", "active", "completed").contains(status)) status else "all"
+
+    val normalizedSearch = search.trim
+
+    val safePage =
+      if (page < 1) 1 else page
+
+    val safePageSize =
+      if (pageSize < 1) 5 else pageSize
+
+    for {
+      totalItems <- todoRepository.countByUserIdWithFilters(
+        userId,
+        normalizedStatus,
+        normalizedSearch
+      )
+
+      todos <- todoRepository.findByUserIdWithFiltersPaged(
+        userId,
+        normalizedStatus,
+        normalizedSearch,
+        safePage,
+        safePageSize
+      )
+    } yield {
+      val totalPages =
+        if (totalItems == 0) 1
+        else Math.ceil(totalItems.toDouble / safePageSize.toDouble).toInt
+
+      TodoPageResponse(
+        todos = todos.map(toResponse),
+        currentPage = safePage,
+        pageSize = safePageSize,
+        totalItems = totalItems,
+        totalPages = totalPages,
+        status = normalizedStatus,
+        search = normalizedSearch
+      )
     }
   }
 }
