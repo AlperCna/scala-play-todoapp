@@ -60,8 +60,8 @@ class TodoController @Inject()(
           },
           data => {
             val dto = TodoCreateRequest(
-              title = data.title,
-              description = data.description
+              title = data.title.trim,
+              description = data.description.map(_.trim).filter(_.nonEmpty)
             )
 
             todoService.createTodo(userId, dto).map { createdTodo =>
