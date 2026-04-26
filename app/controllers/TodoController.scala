@@ -89,7 +89,7 @@ class TodoController @Inject()(
                 val form = TodoUpdateForm.form.fill(
                   TodoUpdateForm(
                     title = todo.title,
-                    description = None,
+                    description = todo.description,
                     isCompleted = todo.isCompleted
                   )
                 )
@@ -129,8 +129,8 @@ class TodoController @Inject()(
               },
               data => {
                 val dto = TodoUpdateRequest(
-                  title = data.title,
-                  description = data.description,
+                  title = data.title.trim,
+                  description = data.description.map(_.trim).filter(_.nonEmpty),
                   isCompleted = data.isCompleted
                 )
 

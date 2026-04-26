@@ -18,6 +18,7 @@ class TodoServiceImpl @Inject()(
     TodoResponse(
       id = todo.id,
       title = todo.title,
+      description = todo.description,
       isCompleted = todo.isCompleted
     )
   }

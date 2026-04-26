@@ -18,17 +18,8 @@
             value="@todoPage.search"
             >
 
-            <input
-            type="hidden"
-            name="status"
-            value="@todoPage.status"
-            >
-
-            <input
-            type="hidden"
-            name="page"
-            value="1"
-            >
+            <input type="hidden" name="status" value="@todoPage.status">
+            <input type="hidden" name="page" value="1">
 
             <button type="submit">Ara</button>
         </form>
@@ -37,6 +28,13 @@
             @helper.CSRF.formField
 
             <input type="text" name="title" placeholder="Yeni todo..." required>
+
+            <textarea
+            name="description"
+            placeholder="Açıklama..."
+            rows="2"
+            ></textarea>
+
             <button type="submit">Ekle</button>
         </form>
 
@@ -48,23 +46,29 @@
             <ul class="todo-list">
             @for(todo <- todoPage.todos) {
                 <li>
-                    @if(todo.isCompleted) {
-                        <s>@todo.title</s>
-                    } else {
-                        @todo.title
-                    }
+                    <div class="todo-content">
+                        @if(todo.isCompleted) {
+                            <s>@todo.title</s>
+                        } else {
+                            <strong>@todo.title</strong>
+                        }
 
-                <form method="post" action="@routes.TodoController.toggle(todo.id.toString)" style="display:inline;">
-                    @helper.CSRF.formField
-                <button type="submit">Toggle</button>
-                </form>
+                        @todo.description.map { desc =>
+                            <span class="todo-description"> - @desc</span>
+                        }
+                    </div>
 
-                <a href="@routes.TodoController.edit(todo.id.toString)">Edit</a>
+                    <form method="post" action="@routes.TodoController.toggle(todo.id.toString)" style="display:inline;">
+                        @helper.CSRF.formField
+                    <button type="submit">Toggle</button>
+                    </form>
 
-                <form method="post" action="@routes.TodoController.delete(todo.id.toString)" style="display:inline;">
-                    @helper.CSRF.formField
-                <button type="submit">Delete</button>
-                </form>
+                    <a href="@routes.TodoController.edit(todo.id.toString)">Edit</a>
+
+                    <form method="post" action="@routes.TodoController.delete(todo.id.toString)" style="display:inline;">
+                        @helper.CSRF.formField
+                    <button type="submit">Delete</button>
+                    </form>
                 </li>
             }
             </ul>
