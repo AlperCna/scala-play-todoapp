@@ -36,6 +36,9 @@
                 value="@form("email").value.getOrElse("")"
                 required
                 >
+
+                <small id="email-check-message"></small>
+
                 @form("email").errors.map { error =>
                     <small class="field-error">@error.message</small>
                 }
@@ -62,6 +65,9 @@
                 name="confirmPassword"
                 required
                 >
+
+                <small id="password-match-message"></small>
+
                 @form("confirmPassword").errors.map { error =>
                     <small class="field-error">@error.message</small>
                 }

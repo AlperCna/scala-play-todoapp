@@ -11,4 +11,6 @@ trait UserRepository {
   def findById(id: UUID): Future[Option[User]]
 
   def create(user: User): Future[User]
+
+  def emailExists(email: String): Future[Boolean]
 }

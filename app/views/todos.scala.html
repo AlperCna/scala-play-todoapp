@@ -27,13 +27,24 @@
         <form method="post" action="@routes.TodoController.create()" class="todo-form">
             @helper.CSRF.formField
 
-            <input type="text" name="title" placeholder="Yeni todo..." required>
+            <input
+            type="text"
+            name="title"
+            id="todo-title-input"
+            placeholder="Yeni todo..."
+            maxlength="200"
+            required
+            >
+            <small id="todo-title-counter">0 / 200</small>
 
             <textarea
             name="description"
+            id="todo-description-input"
             placeholder="Açıklama..."
+            maxlength="1000"
             rows="2"
             ></textarea>
+            <small id="todo-description-counter">0 / 1000</small>
 
             <button type="submit">Ekle</button>
         </form>
@@ -47,18 +58,22 @@
             @for(todo <- todoPage.todos) {
                 <li>
                     <div class="todo-content">
-                        @if(todo.isCompleted) {
-                            <s>@todo.title</s>
-                        } else {
-                            <strong>@todo.title</strong>
-                        }
+                        <span class="todo-title @if(todo.isCompleted) { completed }">
+                        @todo.title
+                        </span>
 
                         @todo.description.map { desc =>
                             <span class="todo-description"> - @desc</span>
                         }
                     </div>
 
-                    <form method="post" action="@routes.TodoController.toggle(todo.id.toString)" style="display:inline;">
+                    <form
+                    method="post"
+                    action="@routes.TodoController.toggle(todo.id.toString)"
+                    class="ajax-toggle-form"
+                    data-todo-id="@todo.id.toString"
+                    style="display:inline;"
+                    >
                         @helper.CSRF.formField
                     <button type="submit">Toggle</button>
                     </form>

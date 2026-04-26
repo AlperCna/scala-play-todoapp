@@ -2,16 +2,20 @@ package controllers
 
 import dtos._
 import forms._
+import repositories.UserRepository
 import services.AuthService
 
 import javax.inject._
+import play.api.libs.json.Json
 import play.api.mvc._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AuthController @Inject()(
                                 cc: ControllerComponents,
-                                authService: AuthService
+                                authService: AuthService,
+                                userRepository: UserRepository
                               )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
@@ -21,6 +25,29 @@ class AuthController @Inject()(
 
   def registerPage = Action { implicit request =>
     Ok(views.html.register(RegisterForm.form))
+  }
+
+  def checkEmail = Action.async { implicit request =>
+    val email = request.getQueryString("email").getOrElse("").trim.toLowerCase
+
+    if (email.isEmpty) {
+      Future.successful(
+        BadRequest(Json.obj(
+          "available" -> false,
+          "message" -> "Email boş olamaz."
+        ))
+      )
+    } else {
+      userRepository.emailExists(email).map { exists =>
+        Ok(Json.obj(
+          "available" -> !exists,
+          "message" -> {
+            if (exists) "Bu email zaten kullanılıyor."
+            else "Bu email kullanılabilir."
+          }
+        ))
+      }
+    }
   }
 
   def register = Action.async { implicit request =>

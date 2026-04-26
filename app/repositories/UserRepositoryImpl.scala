@@ -90,4 +90,21 @@ class UserRepositoryImpl @Inject()(
       user
     }
   }
+
+  override def emailExists(email: String): Future[Boolean] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |SELECT COUNT(*) AS total
+          |FROM users
+          |WHERE email = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, email.trim.toLowerCase)
+
+      val rs = stmt.executeQuery()
+      if (rs.next()) rs.getInt("total") > 0 else false
+    }
+  }
 }

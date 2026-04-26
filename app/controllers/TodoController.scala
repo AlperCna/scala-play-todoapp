@@ -10,6 +10,7 @@ import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import play.api.libs.json.Json
 
 @Singleton
 class TodoController @Inject()(
@@ -192,32 +193,65 @@ class TodoController @Inject()(
   }
 
   def toggle(id: String) = Action.async { implicit request =>
+    val isAjax =
+      request.headers.get("X-Requested-With").contains("XMLHttpRequest")
+
     getCurrentUserId(request) match {
       case Some(userId) =>
         Try(UUID.fromString(id)).toOption match {
           case Some(todoId) =>
             todoService.toggleTodo(userId, todoId).map {
-              case Some(_) =>
-                Redirect(routes.TodoController.index())
-                  .flashing("success" -> "Todo status updated.")
+              case Some(updatedTodo) =>
+                if (isAjax) {
+                  Ok(Json.obj(
+                    "success" -> true,
+                    "id" -> updatedTodo.id.toString,
+                    "title" -> updatedTodo.title,
+                    "isCompleted" -> updatedTodo.isCompleted
+                  ))
+                } else {
+                  Redirect(routes.TodoController.index())
+                    .flashing("success" -> "Todo status updated.")
+                }
 
               case None =>
-                Redirect(routes.TodoController.index())
-                  .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                if (isAjax) {
+                  NotFound(Json.obj(
+                    "success" -> false,
+                    "message" -> "Todo bulunamadı veya size ait değil."
+                  ))
+                } else {
+                  Redirect(routes.TodoController.index())
+                    .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                }
             }
 
           case None =>
-            Future.successful(
-              Redirect(routes.TodoController.index())
-                .flashing("error" -> "Geçersiz todo id.")
-            )
+            Future.successful {
+              if (isAjax) {
+                BadRequest(Json.obj(
+                  "success" -> false,
+                  "message" -> "Geçersiz todo id."
+                ))
+              } else {
+                Redirect(routes.TodoController.index())
+                  .flashing("error" -> "Geçersiz todo id.")
+              }
+            }
         }
 
       case None =>
-        Future.successful(
-          Redirect(routes.AuthController.loginPage())
-            .flashing("error" -> "Lütfen önce giriş yapın.")
-        )
+        Future.successful {
+          if (isAjax) {
+            Unauthorized(Json.obj(
+              "success" -> false,
+              "message" -> "Lütfen önce giriş yapın."
+            ))
+          } else {
+            Redirect(routes.AuthController.loginPage())
+              .flashing("error" -> "Lütfen önce giriş yapın.")
+          }
+        }
     }
   }
 }

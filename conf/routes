@@ -14,6 +14,7 @@ GET     /register                   controllers.AuthController.registerPage()
 POST    /login                      controllers.AuthController.login()
 POST    /register                   controllers.AuthController.register()
 POST    /logout                     controllers.AuthController.logout()
+GET     /check-email                controllers.AuthController.checkEmail()
 
 # Todo SSR
 GET     /todos                      controllers.TodoController.index()
