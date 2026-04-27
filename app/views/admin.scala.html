@@ -1,4 +1,4 @@
-@(userCount: Int, todoCount: Int, activeUserCount: Int)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(stats: dtos.AdminDashboardResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Admin Dashboard") {
     <section class="admin-page">
@@ -6,20 +6,30 @@
 
         <div class="stats">
             <div>
-                <strong>Total Users:</strong> @userCount
+                <strong>Total Users:</strong> @stats.totalUsers
             </div>
 
             <div>
-                <strong>Total Todos:</strong> @todoCount
+                <strong>Active Users:</strong> @stats.activeUsers
             </div>
 
             <div>
-                <strong>Active Users:</strong> @activeUserCount
+                <strong>Passive Users:</strong> @stats.passiveUsers
+            </div>
+
+            <div>
+                <strong>Total Todos:</strong> @stats.totalTodos
             </div>
         </div>
 
-        <p>
-            <a href="@routes.AdminController.dashboard()">Dashboard</a>
-        </p>
+        <div class="admin-links">
+            <p>
+                <a href="@routes.AdminController.users()">Kullanıcıları Yönet</a>
+            </p>
+
+            <p>
+                <a href="@routes.AdminController.todos()">Tüm Todo Kayıtlarını Gör</a>
+            </p>
+        </div>
     </section>
 }

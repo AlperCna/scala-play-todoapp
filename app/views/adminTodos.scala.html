@@ -1,0 +1,100 @@
+@(todoPage: dtos.AdminTodoPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Admin Todos") {
+    <section class="admin-todos-page">
+        <h1>Admin Todos</h1>
+
+        <p>
+            <a href="@routes.AdminController.dashboard()">Dashboard</a> |
+            <a href="@routes.AdminController.users()">Users</a>
+        </p>
+
+        <div class="todo-filters">
+            <a class="@if(todoPage.status == "all") { active }"
+            href="@routes.AdminController.todos()?status=all&search=@todoPage.search&page=1">
+                All
+            </a>
+
+            <a class="@if(todoPage.status == "active") { active }"
+            href="@routes.AdminController.todos()?status=active&search=@todoPage.search&page=1">
+                Active
+            </a>
+
+            <a class="@if(todoPage.status == "completed") { active }"
+            href="@routes.AdminController.todos()?status=completed&search=@todoPage.search&page=1">
+                Completed
+            </a>
+        </div>
+
+        <form method="get" action="@routes.AdminController.todos()" class="search-form">
+            <input
+            type="text"
+            name="search"
+            placeholder="Todo, username veya email ara..."
+            value="@todoPage.search"
+            >
+
+            <input type="hidden" name="status" value="@todoPage.status">
+            <input type="hidden" name="page" value="1">
+
+            <button type="submit">Ara</button>
+        </form>
+
+        @if(todoPage.todos.isEmpty) {
+            <p class="empty-message">
+                Arama veya filtreye uygun todo bulunamadı.
+            </p>
+        } else {
+            <table border="1" cellpadding="6">
+                <thead>
+                    <tr>
+                        <th>Owner</th>
+                        <th>Email</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                @for(todo <- todoPage.todos) {
+                    <tr>
+                        <td>@todo.username</td>
+                        <td>@todo.email</td>
+                        <td>@todo.title</td>
+                        <td>@todo.description.getOrElse("-")</td>
+                        <td>
+                        @if(todo.isCompleted) {
+                            <span class="status-active">Completed</span>
+                        } else {
+                            <span class="status-passive">Active</span>
+                        }
+                        </td>
+                        <td>@todo.createdAt</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+
+        <div class="pagination">
+            <p>
+                Page @todoPage.currentPage / @todoPage.totalPages
+                - Total: @todoPage.totalItems
+            </p>
+
+            @if(todoPage.currentPage > 1) {
+                <a href="@routes.AdminController.todos()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage - 1)">
+                    Previous
+                </a>
+            }
+
+            @if(todoPage.currentPage < todoPage.totalPages) {
+                <a href="@routes.AdminController.todos()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage + 1)">
+                    Next
+                </a>
+            }
+        </div>
+    </section>
+}

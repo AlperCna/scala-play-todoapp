@@ -1,11 +1,22 @@
 package controllers
 
+import services.AdminService
+
+import java.util.UUID
 import javax.inject._
 import play.api.mvc._
 
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
+
 @Singleton
-class AdminController @Inject()(cc: ControllerComponents)
+class AdminController @Inject()(
+                                 cc: ControllerComponents,
+                                 adminService: AdminService
+                               )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
+
+  private val pageSize = 10
 
   private def isLoggedIn(request: RequestHeader): Boolean = {
     request.session.get("userId").isDefined
@@ -25,24 +36,105 @@ class AdminController @Inject()(cc: ControllerComponents)
     }
   }
 
-  def dashboard = Action { implicit request =>
+  private def getSearch(request: RequestHeader): String = {
+    request.getQueryString("search").getOrElse("")
+  }
+
+  private def getStatus(request: RequestHeader): String = {
+    request.getQueryString("status").getOrElse("all")
+  }
+
+  private def getPage(request: RequestHeader): Int = {
+    request.getQueryString("page")
+      .flatMap(value => Try(value.toInt).toOption)
+      .filter(_ > 0)
+      .getOrElse(1)
+  }
+
+  def dashboard = Action.async { implicit request =>
     if (isAdmin(request)) {
-      Ok(views.html.admin(
-        userCount = 12,
-        todoCount = 48,
-        activeUserCount = 10
-      ))
+      adminService.getDashboardStats().map { stats =>
+        Ok(views.html.admin(stats))
+      }
     } else {
-      unauthorizedResult(request)
+      Future.successful(unauthorizedResult(request))
     }
   }
 
-  def users = Action { implicit request =>
+  def users = Action.async { implicit request =>
     if (isAdmin(request)) {
-      val users = Seq("alper", "admin", "enes")
-      Ok(views.html.adminUsers(users))
+      val search = getSearch(request)
+      val page = getPage(request)
+
+      adminService.getUsersPaged(search, page, pageSize).map { userPage =>
+        Ok(views.html.adminUsers(userPage))
+      }
     } else {
-      unauthorizedResult(request)
+      Future.successful(unauthorizedResult(request))
+    }
+  }
+
+  def todos = Action.async { implicit request =>
+    if (isAdmin(request)) {
+      val status = getStatus(request)
+      val search = getSearch(request)
+      val page = getPage(request)
+
+      adminService.getTodosPaged(status, search, page, pageSize).map { todoPage =>
+        Ok(views.html.adminTodos(todoPage))
+      }
+    } else {
+      Future.successful(unauthorizedResult(request))
+    }
+  }
+
+  def enableUser(id: String) = Action.async { implicit request =>
+    if (isAdmin(request)) {
+      Try(UUID.fromString(id)).toOption match {
+        case Some(userId) =>
+          adminService.enableUser(userId).map {
+            case true =>
+              Redirect(routes.AdminController.users())
+                .flashing("success" -> "Kullanıcı aktif hale getirildi.")
+
+            case false =>
+              Redirect(routes.AdminController.users())
+                .flashing("error" -> "Kullanıcı bulunamadı.")
+          }
+
+        case None =>
+          Future.successful(
+            Redirect(routes.AdminController.users())
+              .flashing("error" -> "Geçersiz kullanıcı id.")
+          )
+      }
+    } else {
+      Future.successful(unauthorizedResult(request))
+    }
+  }
+
+  def disableUser(id: String) = Action.async { implicit request =>
+    if (isAdmin(request)) {
+      Try(UUID.fromString(id)).toOption match {
+        case Some(userId) =>
+          adminService.disableUser(userId).map {
+            case true =>
+              Redirect(routes.AdminController.users())
+                .flashing("success" -> "Kullanıcı pasif hale getirildi.")
+
+            case false =>
+              Redirect(routes.AdminController.users())
+                .flashing("error" -> "Kullanıcı bulunamadı.")
+          }
+
+        case None =>
+          Future.successful(
+            Redirect(routes.AdminController.users())
+              .flashing("error" -> "Geçersiz kullanıcı id.")
+          )
+      }
+    } else {
+      Future.successful(unauthorizedResult(request))
     }
   }
 }

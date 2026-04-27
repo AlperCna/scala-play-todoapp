@@ -33,4 +33,16 @@ trait TodoRepository {
                                 status: String,
                                 search: String
                               ): Future[Int]
+
+
+  def countAllTodos(): Future[Int]
+
+  def countAllTodosWithFilters(status: String, search: String): Future[Int]
+
+  def findAllTodosWithUserPaged(
+                                 status: String,
+                                 search: String,
+                                 page: Int,
+                                 pageSize: Int
+                               ): Future[Seq[(Todo, String, String)]]
 }

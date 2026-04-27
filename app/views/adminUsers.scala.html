@@ -1,22 +1,102 @@
-@(users: Seq[String])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(userPage: dtos.UserPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Admin Users") {
     <section class="admin-users-page">
         <h1>Admin Users</h1>
 
-        <table border="1" cellpadding="6">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                </tr>
-            </thead>
-            <tbody>
-            @for(user <- users) {
-                <tr>
-                    <td>@user</td>
-                </tr>
+        <p>
+            <a href="@routes.AdminController.dashboard()">Dashboard'a Dön</a>
+        </p>
+
+        <form method="get" action="@routes.AdminController.users()" class="search-form">
+            <input
+            type="text"
+            name="search"
+            placeholder="Kullanıcı ara..."
+            value="@userPage.search"
+            >
+
+            <input type="hidden" name="page" value="1">
+
+            <button type="submit">Ara</button>
+        </form>
+
+        @if(userPage.users.isEmpty) {
+            @if(userPage.search.nonEmpty) {
+                <p class="empty-message">
+                    Arama kriterine uygun kullanıcı bulunamadı.
+                </p>
+            } else {
+                <p class="empty-message">
+                    Henüz kullanıcı bulunamadı.
+                </p>
             }
-            </tbody>
-        </table>
+        } else {
+            <table border="1" cellpadding="6">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                @for(user <- userPage.users) {
+                    <tr>
+                        <td>@user.username</td>
+                        <td>@user.email</td>
+                        <td>@user.role</td>
+
+                        <td>
+                        @if(user.isActive) {
+                            <span class="status-active">Active</span>
+                        } else {
+                            <span class="status-passive">Passive</span>
+                        }
+                        </td>
+
+                        <td>@user.createdAt</td>
+
+                        <td>
+                        @if(user.isActive) {
+                            <form method="post" action="@routes.AdminController.disableUser(user.id)" style="display:inline;">
+                                @helper.CSRF.formField
+                                <button type="submit">Passive Yap</button>
+                            </form>
+                        } else {
+                            <form method="post" action="@routes.AdminController.enableUser(user.id)" style="display:inline;">
+                                @helper.CSRF.formField
+                                <button type="submit">Active Yap</button>
+                            </form>
+                        }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+
+        <div class="pagination">
+            <p>
+                Page @userPage.currentPage / @userPage.totalPages
+                - Total: @userPage.totalItems
+            </p>
+
+            @if(userPage.currentPage > 1) {
+                <a href="@routes.AdminController.users()?search=@userPage.search&page=@(userPage.currentPage - 1)">
+                    Previous
+                </a>
+            }
+
+            @if(userPage.currentPage < userPage.totalPages) {
+                <a href="@routes.AdminController.users()?search=@userPage.search&page=@(userPage.currentPage + 1)">
+                    Next
+                </a>
+            }
+        </div>
     </section>
 }

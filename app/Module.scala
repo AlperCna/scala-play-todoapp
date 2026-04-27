@@ -8,5 +8,6 @@ class Module extends AbstractModule {
     bind(classOf[AuthService]).to(classOf[AuthServiceImpl])
     bind(classOf[TodoRepository]).to(classOf[TodoRepositoryImpl])
     bind(classOf[TodoService]).to(classOf[TodoServiceImpl])
+    bind(classOf[AdminService]).to(classOf[AdminServiceImpl])
   }
 }

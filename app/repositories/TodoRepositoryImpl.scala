@@ -362,4 +362,129 @@ class TodoRepositoryImpl @Inject()(
       if (rs.next()) rs.getInt("total") else 0
     }
   }
+
+  override def countAllTodos(): Future[Int] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |SELECT COUNT(*) AS total
+          |FROM todos
+          |WHERE is_deleted = 0
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      val rs = stmt.executeQuery()
+
+      if (rs.next()) rs.getInt("total") else 0
+    }
+  }
+
+  override def countAllTodosWithFilters(status: String, search: String): Future[Int] = Future {
+    db.withConnection { conn =>
+      val statusCondition = status match {
+        case "active" => "AND t.is_completed = 0"
+        case "completed" => "AND t.is_completed = 1"
+        case _ => ""
+      }
+
+      val hasSearch = search.trim.nonEmpty
+
+      val searchCondition =
+        if (hasSearch) {
+          "AND (t.title LIKE ? OR t.description LIKE ? OR u.username LIKE ? OR u.email LIKE ?)"
+        } else {
+          ""
+        }
+
+      val sql =
+        s"""
+           |SELECT COUNT(*) AS total
+           |FROM todos t
+           |INNER JOIN users u ON t.user_id = u.id
+           |WHERE t.is_deleted = 0
+           |$statusCondition
+           |$searchCondition
+           |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+
+      if (hasSearch) {
+        val keyword = s"%${search.trim}%"
+        stmt.setString(1, keyword)
+        stmt.setString(2, keyword)
+        stmt.setString(3, keyword)
+        stmt.setString(4, keyword)
+      }
+
+      val rs = stmt.executeQuery()
+      if (rs.next()) rs.getInt("total") else 0
+    }
+  }
+
+  override def findAllTodosWithUserPaged(
+                                          status: String,
+                                          search: String,
+                                          page: Int,
+                                          pageSize: Int
+                                        ): Future[Seq[(Todo, String, String)]] = Future {
+    db.withConnection { conn =>
+      val statusCondition = status match {
+        case "active" => "AND t.is_completed = 0"
+        case "completed" => "AND t.is_completed = 1"
+        case _ => ""
+      }
+
+      val hasSearch = search.trim.nonEmpty
+
+      val searchCondition =
+        if (hasSearch) {
+          "AND (t.title LIKE ? OR t.description LIKE ? OR u.username LIKE ? OR u.email LIKE ?)"
+        } else {
+          ""
+        }
+
+      val safePage = if (page < 1) 1 else page
+      val safePageSize = if (pageSize < 1) 10 else pageSize
+      val offset = (safePage - 1) * safePageSize
+
+      val sql =
+        s"""
+           |SELECT
+           |  t.id, t.user_id, t.title, t.description, t.is_completed,
+           |  t.created_at, t.updated_at, t.deleted_at, t.is_deleted,
+           |  u.username, u.email
+           |FROM todos t
+           |INNER JOIN users u ON t.user_id = u.id
+           |WHERE t.is_deleted = 0
+           |$statusCondition
+           |$searchCondition
+           |ORDER BY t.created_at DESC
+           |OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+           |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+
+      if (hasSearch) {
+        val keyword = s"%${search.trim}%"
+        stmt.setString(1, keyword)
+        stmt.setString(2, keyword)
+        stmt.setString(3, keyword)
+        stmt.setString(4, keyword)
+        stmt.setInt(5, offset)
+        stmt.setInt(6, safePageSize)
+      } else {
+        stmt.setInt(1, offset)
+        stmt.setInt(2, safePageSize)
+      }
+
+      val rs = stmt.executeQuery()
+      val todos = scala.collection.mutable.ListBuffer[(Todo, String, String)]()
+
+      while (rs.next()) {
+        todos += ((mapTodo(rs), rs.getString("username"), rs.getString("email")))
+      }
+
+      todos.toSeq
+    }
+  }
 }
