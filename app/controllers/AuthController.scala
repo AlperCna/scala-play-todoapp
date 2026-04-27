@@ -30,11 +30,11 @@ class AuthController @Inject()(
   def checkEmail = Action.async { implicit request =>
     val email = request.getQueryString("email").getOrElse("").trim.toLowerCase
 
-    if (email.isEmpty) {
+    if (email.isEmpty || !email.contains("@")) {
       Future.successful(
         BadRequest(Json.obj(
           "available" -> false,
-          "message" -> "Email boş olamaz."
+          "message" -> "Geçerli bir email giriniz."
         ))
       )
     } else {

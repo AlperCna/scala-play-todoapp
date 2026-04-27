@@ -1,4 +1,4 @@
-@(todoPage: dtos.TodoPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(todoPage: dtos.TodoPageResponse, createForm: play.api.data.Form[forms.TodoCreateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Todos") {
     <section class="todo-page">
@@ -27,24 +27,44 @@
         <form method="post" action="@routes.TodoController.create()" class="todo-form">
             @helper.CSRF.formField
 
-            <input
-            type="text"
-            name="title"
-            id="todo-title-input"
-            placeholder="Yeni todo..."
-            maxlength="200"
-            required
-            >
-            <small id="todo-title-counter">0 / 200</small>
+            @if(createForm.hasGlobalErrors) {
+                <div class="alert alert-error">
+                @createForm.globalErrors.map(_.message).mkString(", ")
+                </div>
+            }
 
-            <textarea
-            name="description"
-            id="todo-description-input"
-            placeholder="Açıklama..."
-            maxlength="1000"
-            rows="2"
-            ></textarea>
-            <small id="todo-description-counter">0 / 1000</small>
+            <div class="form-group">
+                <input
+                type="text"
+                name="title"
+                id="todo-title-input"
+                placeholder="Yeni todo..."
+                maxlength="200"
+                value="@createForm("title").value.getOrElse("")"
+                required
+                >
+                <small id="todo-title-counter">@createForm("title").value.getOrElse("").length / 200</small>
+
+                @createForm("title").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
+            </div>
+
+            <div class="form-group">
+                <textarea
+                name="description"
+                id="todo-description-input"
+                placeholder="Açıklama..."
+                maxlength="1000"
+                rows="2"
+                >@createForm("description").value.getOrElse("")</textarea>
+
+                <small id="todo-description-counter">@createForm("description").value.getOrElse("").length / 1000</small>
+
+                @createForm("description").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
+            </div>
 
             <button type="submit">Ekle</button>
         </form>

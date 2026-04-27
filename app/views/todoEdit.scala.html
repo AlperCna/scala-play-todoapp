@@ -4,6 +4,12 @@
     <section class="todo-edit-page">
         <h1>Edit Todo</h1>
 
+        @if(form.hasGlobalErrors) {
+            <div class="alert alert-error">
+            @form.globalErrors.map(_.message).mkString(", ")
+            </div>
+        }
+
         <form method="post" action="@routes.TodoController.update(id)" class="todo-form">
             @helper.CSRF.formField
 
@@ -13,14 +19,28 @@
                 type="text"
                 id="title"
                 name="title"
+                maxlength="200"
                 value="@form("title").value.getOrElse("")"
                 required
                 >
+
+                @form("title").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
             </div>
 
             <div class="form-group">
                 <label for="description">Description</label>
-                <textarea id="description" name="description">@form("description").value.getOrElse("")</textarea>
+                <textarea
+                id="description"
+                name="description"
+                maxlength="1000"
+                rows="4"
+                >@form("description").value.getOrElse("")</textarea>
+
+                @form("description").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
             </div>
 
             <div class="form-group">
@@ -29,10 +49,14 @@
                     type="checkbox"
                     name="isCompleted"
                     value="true"
-                    @if(form("isCompleted").value.contains("true")) { checked }
+                        @if(form("isCompleted").value.contains("true")) {checked="checked"}
                     >
                     Completed
                 </label>
+
+                @form("isCompleted").errors.map { error =>
+                    <small class="field-error">@error.message</small>
+                }
             </div>
 
             <button type="submit">Save</button>

@@ -6,11 +6,11 @@ import services.TodoService
 
 import java.util.UUID
 import javax.inject._
+import play.api.libs.json.Json
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
-import play.api.libs.json.Json
 
 @Singleton
 class TodoController @Inject()(
@@ -19,26 +19,38 @@ class TodoController @Inject()(
                               )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
+  private val pageSize = 5
+
   private def getCurrentUserId(request: RequestHeader): Option[UUID] = {
     request.session.get("userId").flatMap { id =>
       Try(UUID.fromString(id)).toOption
     }
   }
 
+  private def getStatus(request: RequestHeader): String = {
+    request.getQueryString("status").getOrElse("all")
+  }
+
+  private def getSearch(request: RequestHeader): String = {
+    request.getQueryString("search").getOrElse("")
+  }
+
+  private def getPage(request: RequestHeader): Int = {
+    request.getQueryString("page")
+      .flatMap(value => Try(value.toInt).toOption)
+      .filter(_ > 0)
+      .getOrElse(1)
+  }
+
   def index() = Action.async { implicit request =>
     getCurrentUserId(request) match {
       case Some(userId) =>
-        val status = request.getQueryString("status").getOrElse("all")
-        val search = request.getQueryString("search").getOrElse("")
-
-        val page = request.getQueryString("page")
-          .flatMap(value => Try(value.toInt).toOption)
-          .getOrElse(1)
-
-        val pageSize = 5
+        val status = getStatus(request)
+        val search = getSearch(request)
+        val page = getPage(request)
 
         todoService.getTodosPaged(userId, status, search, page, pageSize).map { todoPage =>
-          Ok(views.html.todos(todoPage))
+          Ok(views.html.todos(todoPage, TodoCreateForm.form))
         }
 
       case None =>
@@ -54,10 +66,14 @@ class TodoController @Inject()(
       case Some(userId) =>
         TodoCreateForm.form.bindFromRequest().fold(
           formWithErrors => {
-            Future.successful(
-              Redirect(routes.TodoController.index())
+            val status = getStatus(request)
+            val search = getSearch(request)
+            val page = getPage(request)
+
+            todoService.getTodosPaged(userId, status, search, page, pageSize).map { todoPage =>
+              BadRequest(views.html.todos(todoPage, formWithErrors))
                 .flashing("error" -> "Todo oluşturulamadı. Lütfen formu kontrol edin.")
-            )
+            }
           },
           data => {
             val dto = TodoCreateRequest(
@@ -68,6 +84,10 @@ class TodoController @Inject()(
             todoService.createTodo(userId, dto).map { createdTodo =>
               Redirect(routes.TodoController.index())
                 .flashing("success" -> s"Todo created: ${createdTodo.title}")
+            }.recover {
+              case _ =>
+                Redirect(routes.TodoController.index())
+                  .flashing("error" -> "Todo oluşturulurken beklenmeyen bir hata oluştu.")
             }
           }
         )
@@ -126,6 +146,7 @@ class TodoController @Inject()(
               formWithErrors => {
                 Future.successful(
                   BadRequest(views.html.todoEdit(id, formWithErrors))
+                    .flashing("error" -> "Todo güncellenemedi. Lütfen formu kontrol edin.")
                 )
               },
               data => {
@@ -143,6 +164,10 @@ class TodoController @Inject()(
                   case None =>
                     Redirect(routes.TodoController.index())
                       .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                }.recover {
+                  case _ =>
+                    Redirect(routes.TodoController.index())
+                      .flashing("error" -> "Todo güncellenirken beklenmeyen bir hata oluştu.")
                 }
               }
             )
@@ -175,6 +200,10 @@ class TodoController @Inject()(
               case false =>
                 Redirect(routes.TodoController.index())
                   .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+            }.recover {
+              case _ =>
+                Redirect(routes.TodoController.index())
+                  .flashing("error" -> "Todo silinirken beklenmeyen bir hata oluştu.")
             }
 
           case None =>
@@ -223,6 +252,17 @@ class TodoController @Inject()(
                 } else {
                   Redirect(routes.TodoController.index())
                     .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                }
+            }.recover {
+              case _ =>
+                if (isAjax) {
+                  InternalServerError(Json.obj(
+                    "success" -> false,
+                    "message" -> "Todo durumu güncellenirken beklenmeyen bir hata oluştu."
+                  ))
+                } else {
+                  Redirect(routes.TodoController.index())
+                    .flashing("error" -> "Todo durumu güncellenirken beklenmeyen bir hata oluştu.")
                 }
             }
 
