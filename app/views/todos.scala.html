@@ -5,9 +5,26 @@
         <h1>Todo List</h1>
 
         <div class="todo-filters">
-            <a href="@routes.TodoController.index()?status=all&search=@todoPage.search&page=1">All</a>
-            <a href="@routes.TodoController.index()?status=active&search=@todoPage.search&page=1">Active</a>
-            <a href="@routes.TodoController.index()?status=completed&search=@todoPage.search&page=1">Completed</a>
+            <a
+            class="@if(todoPage.status == "all") { active }"
+            href="@routes.TodoController.index()?status=all&search=@todoPage.search&page=1"
+            >
+                All
+            </a>
+
+            <a
+            class="@if(todoPage.status == "active") { active }"
+            href="@routes.TodoController.index()?status=active&search=@todoPage.search&page=1"
+            >
+                Active
+            </a>
+
+            <a
+            class="@if(todoPage.status == "completed") { active }"
+            href="@routes.TodoController.index()?status=completed&search=@todoPage.search&page=1"
+            >
+                Completed
+            </a>
         </div>
 
         <form method="get" action="@routes.TodoController.index()" class="search-form">
@@ -43,7 +60,8 @@
                 value="@createForm("title").value.getOrElse("")"
                 required
                 >
-                <small id="todo-title-counter">@createForm("title").value.getOrElse("").length / 200</small>
+
+                <small id="todo-title-counter">@(createForm("title").value.getOrElse("").length) / 200</small>
 
                 @createForm("title").errors.map { error =>
                     <small class="field-error">@error.message</small>
@@ -59,7 +77,7 @@
                 rows="2"
                 >@createForm("description").value.getOrElse("")</textarea>
 
-                <small id="todo-description-counter">@createForm("description").value.getOrElse("").length / 1000</small>
+                <small id="todo-description-counter">@(createForm("description").value.getOrElse("").length) / 1000</small>
 
                 @createForm("description").errors.map { error =>
                     <small class="field-error">@error.message</small>
@@ -70,9 +88,15 @@
         </form>
 
         @if(todoPage.todos.isEmpty) {
-            <p class="empty-message">
-                Henüz todo bulunamadı. Yeni todo ekleyebilir veya filtreleri değiştirebilirsin.
-            </p>
+            @if(todoPage.search.nonEmpty || todoPage.status != "all") {
+                <p class="empty-message">
+                    Arama veya filtreye uygun todo bulunamadı.
+                </p>
+            } else {
+                <p class="empty-message">
+                    Henüz todo bulunamadı. Yeni todo ekleyerek başlayabilirsin.
+                </p>
+            }
         } else {
             <ul class="todo-list">
             @for(todo <- todoPage.todos) {
