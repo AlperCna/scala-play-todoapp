@@ -11,4 +11,8 @@ trait AuditLogRepository {
   def findByUserId(userId: UUID): Future[Seq[AuditLog]]
 
   def findRecent(limit: Int): Future[Seq[AuditLog]]
+
+  def findPaged(page: Int, pageSize: Int): Future[Seq[AuditLog]]
+
+  def countAll(): Future[Int]
 }

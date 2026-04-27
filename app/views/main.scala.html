@@ -30,6 +30,9 @@
 
                 @if(role == "ADMIN") {
                     <a href="@routes.AdminController.dashboard()">Admin</a>
+                    <a href="@routes.AdminController.users()">Users</a>
+                    <a href="@routes.AdminController.todos()">All Todos</a>
+                    <a href="@routes.AdminController.auditLogs()">Audit Logs</a>
                 }
 
                 <span>Merhaba, @username</span>

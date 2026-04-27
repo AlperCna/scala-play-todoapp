@@ -3,19 +3,22 @@ package controllers
 import dtos._
 import forms._
 import repositories.UserRepository
-import services.AuthService
+import services.{AuditLogService, AuthService}
 
+import java.util.UUID
 import javax.inject._
 import play.api.libs.json.Json
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class AuthController @Inject()(
                                 cc: ControllerComponents,
                                 authService: AuthService,
-                                userRepository: UserRepository
+                                userRepository: UserRepository,
+                                auditLogService: AuditLogService
                               )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
@@ -64,9 +67,17 @@ class AuthController @Inject()(
           password = data.password
         )
 
-        authService.register(dto).map { _ =>
-          Redirect(routes.AuthController.loginPage())
-            .flashing("success" -> "Register successful. Please login.")
+        authService.register(dto).flatMap { user =>
+          auditLogService
+            .log(
+              userId = Some(user.id),
+              action = "USER_REGISTERED",
+              request = request
+            )
+            .map { _ =>
+              Redirect(routes.AuthController.loginPage())
+                .flashing("success" -> "Register successful. Please login.")
+            }
         }.recover {
           case ex: RuntimeException =>
             val formWithError =
@@ -101,15 +112,23 @@ class AuthController @Inject()(
           password = data.password
         )
 
-        authService.login(dto).map {
+        authService.login(dto).flatMap {
           case Some(user) =>
-            Redirect(routes.TodoController.index())
-              .withSession(
-                "userId" -> user.id.toString,
-                "username" -> user.username,
-                "role" -> user.role
+            auditLogService
+              .log(
+                userId = Some(user.id),
+                action = "USER_LOGIN",
+                request = request
               )
-              .flashing("success" -> s"Welcome, ${user.username}")
+              .map { _ =>
+                Redirect(routes.TodoController.index())
+                  .withSession(
+                    "userId" -> user.id.toString,
+                    "username" -> user.username,
+                    "role" -> user.role
+                  )
+                  .flashing("success" -> s"Welcome, ${user.username}")
+              }
 
           case None =>
             val formWithError =
@@ -117,15 +136,28 @@ class AuthController @Inject()(
                 .fill(data)
                 .withGlobalError("Email or password is incorrect.")
 
-            BadRequest(views.html.login(formWithError))
+            Future.successful(
+              BadRequest(views.html.login(formWithError))
+            )
         }
       }
     )
   }
 
-  def logout = Action {
-    Redirect(routes.AuthController.loginPage())
-      .withNewSession
-      .flashing("success" -> "Logout successful.")
+  def logout = Action.async { implicit request =>
+    val currentUserId =
+      request.session.get("userId").flatMap(id => Try(UUID.fromString(id)).toOption)
+
+    auditLogService
+      .log(
+        userId = currentUserId,
+        action = "USER_LOGOUT",
+        request = request
+      )
+      .map { _ =>
+        Redirect(routes.AuthController.loginPage())
+          .withNewSession
+          .flashing("success" -> "Logout successful.")
+      }
   }
 }

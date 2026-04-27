@@ -1,6 +1,6 @@
 package services
 
-import dtos.{AdminDashboardResponse, AdminTodoPageResponse, UserPageResponse}
+import dtos.{AdminDashboardResponse, AdminTodoPageResponse, AuditLogPageResponse, UserPageResponse}
 
 import java.util.UUID
 import scala.concurrent.Future
@@ -21,6 +21,11 @@ trait AdminService {
                      page: Int,
                      pageSize: Int
                    ): Future[AdminTodoPageResponse]
+
+  def getAuditLogsPaged(
+                         page: Int,
+                         pageSize: Int
+                       ): Future[AuditLogPageResponse]
 
   def enableUser(userId: UUID): Future[Boolean]
 

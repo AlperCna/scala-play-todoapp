@@ -88,6 +88,18 @@ class AdminController @Inject()(
     }
   }
 
+  def auditLogs = Action.async { implicit request =>
+    if (isAdmin(request)) {
+      val page = getPage(request)
+
+      adminService.getAuditLogsPaged(page, pageSize).map { logPage =>
+        Ok(views.html.adminAuditLogs(logPage))
+      }
+    } else {
+      Future.successful(unauthorizedResult(request))
+    }
+  }
+
   def enableUser(id: String) = Action.async { implicit request =>
     if (isAdmin(request)) {
       Try(UUID.fromString(id)).toOption match {

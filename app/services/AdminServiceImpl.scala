@@ -1,8 +1,8 @@
 package services
 
-import dtos.{AdminDashboardResponse, AdminTodoPageResponse, AdminTodoResponse, AdminUserResponse, UserPageResponse}
-import models.{Todo, User}
-import repositories.{TodoRepository, UserRepository}
+import dtos._
+import models.{AuditLog, Todo, User}
+import repositories.{AuditLogRepository, TodoRepository, UserRepository}
 
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -12,7 +12,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AdminServiceImpl @Inject()(
                                   userRepository: UserRepository,
-                                  todoRepository: TodoRepository
+                                  todoRepository: TodoRepository,
+                                  auditLogRepository: AuditLogRepository
                                 )(implicit ec: ExecutionContext) extends AdminService {
 
   private val dateFormatter: DateTimeFormatter =
@@ -29,11 +30,7 @@ class AdminServiceImpl @Inject()(
     )
   }
 
-  private def toAdminTodoResponse(
-                                   todo: Todo,
-                                   username: String,
-                                   email: String
-                                 ): AdminTodoResponse = {
+  private def toAdminTodoResponse(todo: Todo, username: String, email: String): AdminTodoResponse = {
     AdminTodoResponse(
       id = todo.id.toString,
       userId = todo.userId.toString,
@@ -43,6 +40,17 @@ class AdminServiceImpl @Inject()(
       description = todo.description,
       isCompleted = todo.isCompleted,
       createdAt = todo.createdAt.format(dateFormatter)
+    )
+  }
+
+  private def toAuditLogResponse(log: AuditLog): AuditLogResponse = {
+    AuditLogResponse(
+      id = log.id.toString,
+      userId = log.userId.map(_.toString),
+      action = log.action,
+      ipAddress = log.ipAddress,
+      userAgent = log.userAgent,
+      createdAt = log.createdAt.format(dateFormatter)
     )
   }
 
@@ -62,23 +70,14 @@ class AdminServiceImpl @Inject()(
     }
   }
 
-  override def getUsersPaged(
-                              search: String,
-                              page: Int,
-                              pageSize: Int
-                            ): Future[UserPageResponse] = {
+  override def getUsersPaged(search: String, page: Int, pageSize: Int): Future[UserPageResponse] = {
     val normalizedSearch = search.trim
     val safePage = if (page < 1) 1 else page
     val safePageSize = if (pageSize < 1) 10 else pageSize
 
     for {
       totalItems <- userRepository.countAll(normalizedSearch)
-
-      users <- userRepository.findAllPaged(
-        normalizedSearch,
-        safePage,
-        safePageSize
-      )
+      users <- userRepository.findAllPaged(normalizedSearch, safePage, safePageSize)
     } yield {
       val totalPages =
         if (totalItems == 0) 1
@@ -109,11 +108,7 @@ class AdminServiceImpl @Inject()(
     val safePageSize = if (pageSize < 1) 10 else pageSize
 
     for {
-      totalItems <- todoRepository.countAllTodosWithFilters(
-        normalizedStatus,
-        normalizedSearch
-      )
-
+      totalItems <- todoRepository.countAllTodosWithFilters(normalizedStatus, normalizedSearch)
       todosWithUsers <- todoRepository.findAllTodosWithUserPaged(
         normalizedStatus,
         normalizedSearch,
@@ -136,6 +131,28 @@ class AdminServiceImpl @Inject()(
         totalPages = totalPages,
         search = normalizedSearch,
         status = normalizedStatus
+      )
+    }
+  }
+
+  override def getAuditLogsPaged(page: Int, pageSize: Int): Future[AuditLogPageResponse] = {
+    val safePage = if (page < 1) 1 else page
+    val safePageSize = if (pageSize < 1) 10 else pageSize
+
+    for {
+      totalItems <- auditLogRepository.countAll()
+      logs <- auditLogRepository.findPaged(safePage, safePageSize)
+    } yield {
+      val totalPages =
+        if (totalItems == 0) 1
+        else Math.ceil(totalItems.toDouble / safePageSize.toDouble).toInt
+
+      AuditLogPageResponse(
+        logs = logs.map(toAuditLogResponse),
+        currentPage = safePage,
+        pageSize = safePageSize,
+        totalItems = totalItems,
+        totalPages = totalPages
       )
     }
   }

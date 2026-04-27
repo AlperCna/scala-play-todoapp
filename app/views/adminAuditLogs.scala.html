@@ -1,0 +1,66 @@
+@(page: dtos.AuditLogPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Admin Audit Logs") {
+
+    <section class="admin-page">
+        <h1>Audit Logs</h1>
+
+        @if(page.logs.isEmpty) {
+            <p>Kayıt bulunamadı.</p>
+        } else {
+
+            <table border="1" cellpadding="6">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>UserId</th>
+                        <th>IP</th>
+                        <th>User Agent</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @for(log <- page.logs) {
+                    <tr>
+                        <td>@log.action</td>
+
+                        <td>
+                        @log.userId.getOrElse("-")
+                        </td>
+
+                        <td>
+                        @log.ipAddress.getOrElse("-")
+                        </td>
+
+                        <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">
+                        @log.userAgent.getOrElse("-")
+                        </td>
+
+                        <td>@log.createdAt</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+
+        <div class="pagination">
+            <p>
+                Page @page.currentPage / @page.totalPages
+                - Total: @page.totalItems
+            </p>
+
+            @if(page.currentPage > 1) {
+                <a href="@routes.AdminController.auditLogs()?page=@(page.currentPage - 1)">
+                    Previous
+                </a>
+            }
+
+            @if(page.currentPage < page.totalPages) {
+                <a href="@routes.AdminController.auditLogs()?page=@(page.currentPage + 1)">
+                    Next
+                </a>
+            }
+        </div>
+
+    </section>
+}

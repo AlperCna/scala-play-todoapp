@@ -2,7 +2,7 @@ package controllers
 
 import dtos._
 import forms._
-import services.TodoService
+import services.{AuditLogService, TodoService}
 
 import java.util.UUID
 import javax.inject._
@@ -15,7 +15,8 @@ import scala.util.Try
 @Singleton
 class TodoController @Inject()(
                                 cc: ControllerComponents,
-                                todoService: TodoService
+                                todoService: TodoService,
+                                auditLogService: AuditLogService
                               )(implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
@@ -81,9 +82,17 @@ class TodoController @Inject()(
               description = data.description.map(_.trim).filter(_.nonEmpty)
             )
 
-            todoService.createTodo(userId, dto).map { createdTodo =>
-              Redirect(routes.TodoController.index())
-                .flashing("success" -> s"Todo created: ${createdTodo.title}")
+            todoService.createTodo(userId, dto).flatMap { createdTodo =>
+              auditLogService
+                .log(
+                  userId = Some(userId),
+                  action = s"TODO_CREATED: ${createdTodo.title}",
+                  request = request
+                )
+                .map { _ =>
+                  Redirect(routes.TodoController.index())
+                    .flashing("success" -> s"Todo created: ${createdTodo.title}")
+                }
             }.recover {
               case _ =>
                 Redirect(routes.TodoController.index())
@@ -156,14 +165,24 @@ class TodoController @Inject()(
                   isCompleted = data.isCompleted
                 )
 
-                todoService.updateTodo(userId, todoId, dto).map {
+                todoService.updateTodo(userId, todoId, dto).flatMap {
                   case Some(updatedTodo) =>
-                    Redirect(routes.TodoController.index())
-                      .flashing("success" -> s"Todo updated: ${updatedTodo.title}")
+                    auditLogService
+                      .log(
+                        userId = Some(userId),
+                        action = s"TODO_UPDATED: ${updatedTodo.title}",
+                        request = request
+                      )
+                      .map { _ =>
+                        Redirect(routes.TodoController.index())
+                          .flashing("success" -> s"Todo updated: ${updatedTodo.title}")
+                      }
 
                   case None =>
-                    Redirect(routes.TodoController.index())
-                      .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                    Future.successful(
+                      Redirect(routes.TodoController.index())
+                        .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                    )
                 }.recover {
                   case _ =>
                     Redirect(routes.TodoController.index())
@@ -192,14 +211,24 @@ class TodoController @Inject()(
       case Some(userId) =>
         Try(UUID.fromString(id)).toOption match {
           case Some(todoId) =>
-            todoService.deleteTodo(userId, todoId).map {
+            todoService.deleteTodo(userId, todoId).flatMap {
               case true =>
-                Redirect(routes.TodoController.index())
-                  .flashing("success" -> "Todo deleted.")
+                auditLogService
+                  .log(
+                    userId = Some(userId),
+                    action = s"TODO_DELETED: $id",
+                    request = request
+                  )
+                  .map { _ =>
+                    Redirect(routes.TodoController.index())
+                      .flashing("success" -> "Todo deleted.")
+                  }
 
               case false =>
-                Redirect(routes.TodoController.index())
-                  .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                Future.successful(
+                  Redirect(routes.TodoController.index())
+                    .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                )
             }.recover {
               case _ =>
                 Redirect(routes.TodoController.index())
@@ -229,29 +258,39 @@ class TodoController @Inject()(
       case Some(userId) =>
         Try(UUID.fromString(id)).toOption match {
           case Some(todoId) =>
-            todoService.toggleTodo(userId, todoId).map {
+            todoService.toggleTodo(userId, todoId).flatMap {
               case Some(updatedTodo) =>
-                if (isAjax) {
-                  Ok(Json.obj(
-                    "success" -> true,
-                    "id" -> updatedTodo.id.toString,
-                    "title" -> updatedTodo.title,
-                    "isCompleted" -> updatedTodo.isCompleted
-                  ))
-                } else {
-                  Redirect(routes.TodoController.index())
-                    .flashing("success" -> "Todo status updated.")
-                }
+                auditLogService
+                  .log(
+                    userId = Some(userId),
+                    action = s"TODO_TOGGLED: ${updatedTodo.title} -> ${updatedTodo.isCompleted}",
+                    request = request
+                  )
+                  .map { _ =>
+                    if (isAjax) {
+                      Ok(Json.obj(
+                        "success" -> true,
+                        "id" -> updatedTodo.id.toString,
+                        "title" -> updatedTodo.title,
+                        "isCompleted" -> updatedTodo.isCompleted
+                      ))
+                    } else {
+                      Redirect(routes.TodoController.index())
+                        .flashing("success" -> "Todo status updated.")
+                    }
+                  }
 
               case None =>
-                if (isAjax) {
-                  NotFound(Json.obj(
-                    "success" -> false,
-                    "message" -> "Todo bulunamadı veya size ait değil."
-                  ))
-                } else {
-                  Redirect(routes.TodoController.index())
-                    .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                Future.successful {
+                  if (isAjax) {
+                    NotFound(Json.obj(
+                      "success" -> false,
+                      "message" -> "Todo bulunamadı veya size ait değil."
+                    ))
+                  } else {
+                    Redirect(routes.TodoController.index())
+                      .flashing("error" -> "Bu todo bulunamadı veya size ait değil.")
+                  }
                 }
             }.recover {
               case _ =>
