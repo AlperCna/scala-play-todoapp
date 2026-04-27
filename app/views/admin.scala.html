@@ -1,35 +1,74 @@
 @(stats: dtos.AdminDashboardResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Admin Dashboard") {
-    <section class="admin-page">
-        <h1>Admin Dashboard</h1>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
 
-        <div class="stats">
-            <div>
-                <strong>Total Users:</strong> @stats.totalUsers
+            <div class="mb-4">
+                <h1 class="h3 mb-1">Admin Dashboard</h1>
+                <p class="text-muted mb-0">Sistem genel istatistiklerini görüntüleyin.</p>
             </div>
 
-            <div>
-                <strong>Active Users:</strong> @stats.activeUsers
+            <div class="row g-3 mb-4">
+
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card shadow-sm border-0 text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Total Users</h6>
+                            <h3 class="fw-bold">@stats.totalUsers</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card shadow-sm border-0 text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Active Users</h6>
+                            <h3 class="fw-bold text-success">@stats.activeUsers</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card shadow-sm border-0 text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Passive Users</h6>
+                            <h3 class="fw-bold text-danger">@stats.passiveUsers</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card shadow-sm border-0 text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Total Todos</h6>
+                            <h3 class="fw-bold text-primary">@stats.totalTodos</h3>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <div>
-                <strong>Passive Users:</strong> @stats.passiveUsers
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+
+                    <h5 class="mb-3">Admin İşlemleri</h5>
+
+                    <div class="d-flex flex-column flex-md-row gap-3">
+
+                        <a href="@routes.AdminController.users()" class="btn btn-outline-primary">
+                            Kullanıcıları Yönet
+                        </a>
+
+                        <a href="@routes.AdminController.todos()" class="btn btn-outline-secondary">
+                            Tüm Todo Kayıtlarını Gör
+                        </a>
+
+                    </div>
+
+                </div>
             </div>
 
-            <div>
-                <strong>Total Todos:</strong> @stats.totalTodos
-            </div>
         </div>
-
-        <div class="admin-links">
-            <p>
-                <a href="@routes.AdminController.users()">Kullanıcıları Yönet</a>
-            </p>
-
-            <p>
-                <a href="@routes.AdminController.todos()">Tüm Todo Kayıtlarını Gör</a>
-            </p>
-        </div>
-    </section>
+    </div>
 }

@@ -1,155 +1,236 @@
 @(todoPage: dtos.TodoPageResponse, createForm: play.api.data.Form[forms.TodoCreateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Todos") {
-    <section class="todo-page">
-        <h1>Todo List</h1>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
 
-        <div class="todo-filters">
-            <a
-            class="@if(todoPage.status == "all") { active }"
-            href="@routes.TodoController.index()?status=all&search=@todoPage.search&page=1"
-            >
-                All
-            </a>
-
-            <a
-            class="@if(todoPage.status == "active") { active }"
-            href="@routes.TodoController.index()?status=active&search=@todoPage.search&page=1"
-            >
-                Active
-            </a>
-
-            <a
-            class="@if(todoPage.status == "completed") { active }"
-            href="@routes.TodoController.index()?status=completed&search=@todoPage.search&page=1"
-            >
-                Completed
-            </a>
-        </div>
-
-        <form method="get" action="@routes.TodoController.index()" class="search-form">
-            <input
-            type="text"
-            name="search"
-            placeholder="Todo ara..."
-            value="@todoPage.search"
-            >
-
-            <input type="hidden" name="status" value="@todoPage.status">
-            <input type="hidden" name="page" value="1">
-
-            <button type="submit">Ara</button>
-        </form>
-
-        <form method="post" action="@routes.TodoController.create()" class="todo-form">
-            @helper.CSRF.formField
-
-            @if(createForm.hasGlobalErrors) {
-                <div class="alert alert-error">
-                @createForm.globalErrors.map(_.message).mkString(", ")
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Todo List</h1>
+                    <p class="text-muted mb-0">Görevlerini oluştur, takip et ve yönet.</p>
                 </div>
-            }
-
-            <div class="form-group">
-                <input
-                type="text"
-                name="title"
-                id="todo-title-input"
-                placeholder="Yeni todo..."
-                maxlength="200"
-                value="@createForm("title").value.getOrElse("")"
-                required
-                >
-
-                <small id="todo-title-counter">@(createForm("title").value.getOrElse("").length) / 200</small>
-
-                @createForm("title").errors.map { error =>
-                    <small class="field-error">@error.message</small>
-                }
             </div>
 
-            <div class="form-group">
-                <textarea
-                name="description"
-                id="todo-description-input"
-                placeholder="Açıklama..."
-                maxlength="1000"
-                rows="2"
-                >@createForm("description").value.getOrElse("")</textarea>
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
 
-                <small id="todo-description-counter">@(createForm("description").value.getOrElse("").length) / 1000</small>
+                    <form method="post" action="@routes.TodoController.create()">
+                        @helper.CSRF.formField
 
-                @createForm("description").errors.map { error =>
-                    <small class="field-error">@error.message</small>
-                }
-            </div>
-
-            <button type="submit">Ekle</button>
-        </form>
-
-        @if(todoPage.todos.isEmpty) {
-            @if(todoPage.search.nonEmpty || todoPage.status != "all") {
-                <p class="empty-message">
-                    Arama veya filtreye uygun todo bulunamadı.
-                </p>
-            } else {
-                <p class="empty-message">
-                    Henüz todo bulunamadı. Yeni todo ekleyerek başlayabilirsin.
-                </p>
-            }
-        } else {
-            <ul class="todo-list">
-            @for(todo <- todoPage.todos) {
-                <li>
-                    <div class="todo-content">
-                        <span class="todo-title @if(todo.isCompleted) { completed }">
-                        @todo.title
-                        </span>
-
-                        @todo.description.map { desc =>
-                            <span class="todo-description"> - @desc</span>
+                        @if(createForm.hasGlobalErrors) {
+                            <div class="alert alert-danger" role="alert">
+                            @createForm.globalErrors.map(_.message).mkString(", ")
+                            </div>
                         }
+
+                        <div class="mb-3">
+                            <label for="todo-title-input" class="form-label">Yeni Todo</label>
+                            <input
+                            type="text"
+                            name="title"
+                            id="todo-title-input"
+                            placeholder="Yeni todo..."
+                            maxlength="200"
+                            value="@createForm("title").value.getOrElse("")"
+                            class="form-control @if(createForm("title").hasErrors) { is-invalid }"
+                            required
+                            >
+
+                            <div class="form-text">
+                                <span id="todo-title-counter">@(createForm("title").value.getOrElse("").length) / 200</span>
+                            </div>
+
+                            @createForm("title").errors.map { error =>
+                                <div class="invalid-feedback d-block">
+                                    @error.message
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="todo-description-input" class="form-label">Açıklama</label>
+                            <textarea
+                            name="description"
+                            id="todo-description-input"
+                            placeholder="Açıklama..."
+                            maxlength="1000"
+                            rows="3"
+                            class="form-control @if(createForm("description").hasErrors) { is-invalid }"
+                            >@createForm("description").value.getOrElse("")</textarea>
+
+                            <div class="form-text">
+                                <span id="todo-description-counter">@(createForm("description").value.getOrElse("").length) / 1000</span>
+                            </div>
+
+                            @createForm("description").errors.map { error =>
+                                <div class="invalid-feedback d-block">
+                                    @error.message
+                                </div>
+                            }
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            Ekle
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                        <div class="btn-group" role="group">
+                            <a
+                            class="btn btn-outline-primary @if(todoPage.status == "all") { active }"
+                            href="@routes.TodoController.index()?status=all&search=@todoPage.search&page=1"
+                            >
+                                All
+                            </a>
+
+                            <a
+                            class="btn btn-outline-primary @if(todoPage.status == "active") { active }"
+                            href="@routes.TodoController.index()?status=active&search=@todoPage.search&page=1"
+                            >
+                                Active
+                            </a>
+
+                            <a
+                            class="btn btn-outline-primary @if(todoPage.status == "completed") { active }"
+                            href="@routes.TodoController.index()?status=completed&search=@todoPage.search&page=1"
+                            >
+                                Completed
+                            </a>
+                        </div>
+
+                        <form method="get" action="@routes.TodoController.index()" class="d-flex gap-2">
+                            <input
+                            type="text"
+                            name="search"
+                            placeholder="Todo ara..."
+                            value="@todoPage.search"
+                            class="form-control"
+                            >
+
+                            <input type="hidden" name="status" value="@todoPage.status">
+                            <input type="hidden" name="page" value="1">
+
+                            <button type="submit" class="btn btn-outline-secondary">
+                                Ara
+                            </button>
+                        </form>
                     </div>
 
-                    <form
-                    method="post"
-                    action="@routes.TodoController.toggle(todo.id.toString)"
-                    class="ajax-toggle-form"
-                    data-todo-id="@todo.id.toString"
-                    style="display:inline;"
-                    >
-                        @helper.CSRF.formField
-                    <button type="submit">Toggle</button>
-                    </form>
+                    @if(todoPage.todos.isEmpty) {
+                        @if(todoPage.search.nonEmpty || todoPage.status != "all") {
+                            <div class="alert alert-info mb-0">
+                                Arama veya filtreye uygun todo bulunamadı.
+                            </div>
+                        } else {
+                            <div class="alert alert-info mb-0">
+                                Henüz todo bulunamadı. Yeni todo ekleyerek başlayabilirsin.
+                            </div>
+                        }
+                    } else {
+                        <div class="list-group">
+                        @for(todo <- todoPage.todos) {
+                            <div class="list-group-item todo-item" data-todo-id="@todo.id.toString">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
 
-                    <a href="@routes.TodoController.edit(todo.id.toString)">Edit</a>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
 
-                    <form method="post" action="@routes.TodoController.delete(todo.id.toString)" style="display:inline;">
-                        @helper.CSRF.formField
-                    <button type="submit">Delete</button>
-                    </form>
-                </li>
-            }
-            </ul>
-        }
+                                            <span class="todo-title fw-semibold @if(todo.isCompleted) { text-decoration-line-through text-muted }">
+                                            @todo.title
+                                            </span>
 
-        <div class="pagination">
-            <p>
-                Page @todoPage.currentPage / @todoPage.totalPages
-                - Total: @todoPage.totalItems
-            </p>
+                                            <span class="todo-status-badge badge @if(todo.isCompleted) { text-bg-success } else { text-bg-warning }">
+                                            @if(todo.isCompleted) { Completed } else { Active }
+                                            </span>
+                                        </div>
 
-            @if(todoPage.currentPage > 1) {
-                <a href="@routes.TodoController.index()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage - 1)">
-                    Previous
-                </a>
-            }
+                                        @todo.description.map { desc =>
+                                            <p class="text-muted mb-0">@desc</p>
+                                        }
+                                    </div>
 
-            @if(todoPage.currentPage < todoPage.totalPages) {
-                <a href="@routes.TodoController.index()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage + 1)">
-                    Next
-                </a>
-            }
+                                    <div class="d-flex align-items-center gap-2">
+                                        <form
+                                        method="post"
+                                        action="@routes.TodoController.toggle(todo.id.toString)"
+                                        class="ajax-toggle-form mb-0"
+                                        data-todo-id="@todo.id.toString"
+                                        >
+                                            @helper.CSRF.formField
+
+                                            @if(todo.isCompleted) {
+                                                <button type="submit" class="btn btn-sm btn-outline-warning toggle-btn">
+                                                    Undo
+                                                </button>
+                                            } else {
+                                                <button type="submit" class="btn btn-sm btn-outline-success toggle-btn">
+                                                    Complete
+                                                </button>
+                                            }
+                                        </form>
+
+                                        <a
+                                        href="@routes.TodoController.edit(todo.id.toString)"
+                                        class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Edit
+                                        </a>
+
+                                        <form
+                                        method="post"
+                                        action="@routes.TodoController.delete(todo.id.toString)"
+                                        class="mb-0 delete-form"
+                                        >
+                                            @helper.CSRF.formField
+
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                Delete
+                                        </button>
+                                        </form>
+                                    </div>
+
+                                </div>
+                            </div>
+                        }
+                        </div>
+                    }
+
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <p class="text-muted mb-0">
+                    Page @todoPage.currentPage / @todoPage.totalPages
+                    - Total: @todoPage.totalItems
+                </p>
+
+                <div class="btn-group">
+                    @if(todoPage.currentPage > 1) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.TodoController.index()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage - 1)"
+                        >
+                            Previous
+                        </a>
+                    }
+
+                    @if(todoPage.currentPage < todoPage.totalPages) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.TodoController.index()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage + 1)"
+                        >
+                            Next
+                        </a>
+                    }
+                </div>
+            </div>
+
         </div>
-    </section>
+    </div>
 }

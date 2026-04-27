@@ -1,66 +1,105 @@
 @(page: dtos.AuditLogPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Admin Audit Logs") {
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-11">
 
-    <section class="admin-page">
-        <h1>Audit Logs</h1>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Audit Logs</h1>
+                    <p class="text-muted mb-0">Sistemde gerçekleşen kullanıcı ve todo işlemlerini görüntüle.</p>
+                </div>
 
-        @if(page.logs.isEmpty) {
-            <p>Kayıt bulunamadı.</p>
-        } else {
+                <div class="d-flex gap-2">
+                    <a href="@routes.AdminController.dashboard()" class="btn btn-outline-secondary">
+                        Dashboard
+                    </a>
 
-            <table border="1" cellpadding="6">
-                <thead>
-                    <tr>
-                        <th>Action</th>
-                        <th>UserId</th>
-                        <th>IP</th>
-                        <th>User Agent</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @for(log <- page.logs) {
-                    <tr>
-                        <td>@log.action</td>
+                    <a href="@routes.AdminController.users()" class="btn btn-outline-primary">
+                        Users
+                    </a>
 
-                        <td>
-                        @log.userId.getOrElse("-")
-                        </td>
+                    <a href="@routes.AdminController.todos()" class="btn btn-outline-primary">
+                        Todos
+                    </a>
+                </div>
+            </div>
 
-                        <td>
-                        @log.ipAddress.getOrElse("-")
-                        </td>
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
 
-                        <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">
-                        @log.userAgent.getOrElse("-")
-                        </td>
+                @if(page.logs.isEmpty) {
+                    <div class="alert alert-info mb-0">
+                        Kayıt bulunamadı.
+                    </div>
+                } else {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Action</th>
+                                    <th>UserId</th>
+                                    <th>IP</th>
+                                    <th>User Agent</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
 
-                        <td>@log.createdAt</td>
-                    </tr>
+                            <tbody>
+                            @for(log <- page.logs) {
+                                <tr>
+                                    <td>
+                                        <span class="badge text-bg-secondary">
+                                        @log.action
+                                        </span>
+                                    </td>
+
+                                    <td>@log.userId.getOrElse("-")</td>
+
+                                    <td>@log.ipAddress.getOrElse("-")</td>
+
+                                    <td class="text-truncate" style="max-width: 300px;">
+                                    @log.userAgent.getOrElse("-")
+                                    </td>
+
+                                    <td>@log.createdAt</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
                 }
-                </tbody>
-            </table>
-        }
 
-        <div class="pagination">
-            <p>
-                Page @page.currentPage / @page.totalPages
-                - Total: @page.totalItems
-            </p>
+                </div>
+            </div>
 
-            @if(page.currentPage > 1) {
-                <a href="@routes.AdminController.auditLogs()?page=@(page.currentPage - 1)">
-                    Previous
-                </a>
-            }
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4">
+                <p class="text-muted mb-0">
+                    Page @page.currentPage / @page.totalPages
+                    - Total: @page.totalItems
+                </p>
 
-            @if(page.currentPage < page.totalPages) {
-                <a href="@routes.AdminController.auditLogs()?page=@(page.currentPage + 1)">
-                    Next
-                </a>
-            }
+                <div class="btn-group">
+                    @if(page.currentPage > 1) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.AdminController.auditLogs()?page=@(page.currentPage - 1)"
+                        >
+                            Previous
+                        </a>
+                    }
+
+                    @if(page.currentPage < page.totalPages) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.AdminController.auditLogs()?page=@(page.currentPage + 1)"
+                        >
+                            Next
+                        </a>
+                    }
+                </div>
+            </div>
+
         </div>
-
-    </section>
+    </div>
 }

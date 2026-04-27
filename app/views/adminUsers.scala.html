@@ -1,102 +1,159 @@
 @(userPage: dtos.UserPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Admin Users") {
-    <section class="admin-users-page">
-        <h1>Admin Users</h1>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-11">
 
-        <p>
-            <a href="@routes.AdminController.dashboard()">Dashboard'a Dön</a>
-        </p>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Admin Users</h1>
+                    <p class="text-muted mb-0">Sistemdeki kullanıcıları görüntüle ve durumlarını yönet.</p>
+                </div>
 
-        <form method="get" action="@routes.AdminController.users()" class="search-form">
-            <input
-            type="text"
-            name="search"
-            placeholder="Kullanıcı ara..."
-            value="@userPage.search"
-            >
+                <a href="@routes.AdminController.dashboard()" class="btn btn-outline-secondary">
+                    Dashboard'a Dön
+                </a>
+            </div>
 
-            <input type="hidden" name="page" value="1">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
 
-            <button type="submit">Ara</button>
-        </form>
+                    <form method="get" action="@routes.AdminController.users()" class="row g-2">
+                        <div class="col-12 col-md-10">
+                            <input
+                            type="text"
+                            name="search"
+                            placeholder="Kullanıcı ara..."
+                            value="@userPage.search"
+                            class="form-control"
+                            >
+                        </div>
 
-        @if(userPage.users.isEmpty) {
-            @if(userPage.search.nonEmpty) {
-                <p class="empty-message">
-                    Arama kriterine uygun kullanıcı bulunamadı.
-                </p>
-            } else {
-                <p class="empty-message">
-                    Henüz kullanıcı bulunamadı.
-                </p>
-            }
-        } else {
-            <table border="1" cellpadding="6">
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Created At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+                        <input type="hidden" name="page" value="1">
 
-                <tbody>
-                @for(user <- userPage.users) {
-                    <tr>
-                        <td>@user.username</td>
-                        <td>@user.email</td>
-                        <td>@user.role</td>
+                        <div class="col-12 col-md-2 d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                Ara
+                            </button>
+                        </div>
+                    </form>
 
-                        <td>
-                        @if(user.isActive) {
-                            <span class="status-active">Active</span>
-                        } else {
-                            <span class="status-passive">Passive</span>
-                        }
-                        </td>
+                </div>
+            </div>
 
-                        <td>@user.createdAt</td>
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
 
-                        <td>
-                        @if(user.isActive) {
-                            <form method="post" action="@routes.AdminController.disableUser(user.id)" style="display:inline;">
-                                @helper.CSRF.formField
-                                <button type="submit">Passive Yap</button>
-                            </form>
-                        } else {
-                            <form method="post" action="@routes.AdminController.enableUser(user.id)" style="display:inline;">
-                                @helper.CSRF.formField
-                                <button type="submit">Active Yap</button>
-                            </form>
-                        }
-                        </td>
-                    </tr>
+                @if(userPage.users.isEmpty) {
+                    @if(userPage.search.nonEmpty) {
+                        <div class="alert alert-info mb-0">
+                            Arama kriterine uygun kullanıcı bulunamadı.
+                        </div>
+                    } else {
+                        <div class="alert alert-info mb-0">
+                            Henüz kullanıcı bulunamadı.
+                        </div>
+                    }
+                } else {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                            @for(user <- userPage.users) {
+                                <tr>
+                                    <td class="fw-semibold">@user.username</td>
+                                    <td>@user.email</td>
+
+                                    <td>
+                                        <span class="badge text-bg-secondary">
+                                        @user.role
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                    @if(user.isActive) {
+                                        <span class="badge text-bg-success">Active</span>
+                                    } else {
+                                        <span class="badge text-bg-danger">Passive</span>
+                                    }
+                                    </td>
+
+                                    <td>@user.createdAt</td>
+
+                                    <td class="text-end">
+                                    @if(user.isActive) {
+                                        <form
+                                        method="post"
+                                        action="@routes.AdminController.disableUser(user.id)"
+                                        class="d-inline admin-status-form"
+                                        data-message="Bu kullanıcı pasif yapılsın mı?"
+                                        >
+                                            @helper.CSRF.formField
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                Passive Yap
+                                            </button>
+                                        </form>
+                                    } else {
+                                        <form
+                                        method="post"
+                                        action="@routes.AdminController.enableUser(user.id)"
+                                        class="d-inline admin-status-form"
+                                        data-message="Bu kullanıcı aktif yapılsın mı?"
+                                        >
+                                            @helper.CSRF.formField
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                Active Yap
+                                            </button>
+                                        </form>
+                                    }
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
                 }
-                </tbody>
-            </table>
-        }
 
-        <div class="pagination">
-            <p>
-                Page @userPage.currentPage / @userPage.totalPages
-                - Total: @userPage.totalItems
-            </p>
+                </div>
+            </div>
 
-            @if(userPage.currentPage > 1) {
-                <a href="@routes.AdminController.users()?search=@userPage.search&page=@(userPage.currentPage - 1)">
-                    Previous
-                </a>
-            }
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4">
+                <p class="text-muted mb-0">
+                    Page @userPage.currentPage / @userPage.totalPages
+                    - Total: @userPage.totalItems
+                </p>
 
-            @if(userPage.currentPage < userPage.totalPages) {
-                <a href="@routes.AdminController.users()?search=@userPage.search&page=@(userPage.currentPage + 1)">
-                    Next
-                </a>
-            }
+                <div class="btn-group">
+                    @if(userPage.currentPage > 1) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.AdminController.users()?search=@userPage.search&page=@(userPage.currentPage - 1)"
+                        >
+                            Previous
+                        </a>
+                    }
+
+                    @if(userPage.currentPage < userPage.totalPages) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.AdminController.users()?search=@userPage.search&page=@(userPage.currentPage + 1)"
+                        >
+                            Next
+                        </a>
+                    }
+                </div>
+            </div>
+
         </div>
-    </section>
+    </div>
 }

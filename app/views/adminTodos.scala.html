@@ -1,100 +1,151 @@
 @(todoPage: dtos.AdminTodoPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
 
 @main("Admin Todos") {
-    <section class="admin-todos-page">
-        <h1>Admin Todos</h1>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-11">
 
-        <p>
-            <a href="@routes.AdminController.dashboard()">Dashboard</a> |
-            <a href="@routes.AdminController.users()">Users</a>
-        </p>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Admin Todos</h1>
+                    <p class="text-muted mb-0">Tüm kullanıcıların todo kayıtlarını görüntüle.</p>
+                </div>
 
-        <div class="todo-filters">
-            <a class="@if(todoPage.status == "all") { active }"
-            href="@routes.AdminController.todos()?status=all&search=@todoPage.search&page=1">
-                All
-            </a>
+                <div class="d-flex gap-2">
+                    <a href="@routes.AdminController.dashboard()" class="btn btn-outline-secondary">
+                        Dashboard
+                    </a>
 
-            <a class="@if(todoPage.status == "active") { active }"
-            href="@routes.AdminController.todos()?status=active&search=@todoPage.search&page=1">
-                Active
-            </a>
+                    <a href="@routes.AdminController.users()" class="btn btn-outline-primary">
+                        Users
+                    </a>
+                </div>
+            </div>
 
-            <a class="@if(todoPage.status == "completed") { active }"
-            href="@routes.AdminController.todos()?status=completed&search=@todoPage.search&page=1">
-                Completed
-            </a>
-        </div>
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
 
-        <form method="get" action="@routes.AdminController.todos()" class="search-form">
-            <input
-            type="text"
-            name="search"
-            placeholder="Todo, username veya email ara..."
-            value="@todoPage.search"
-            >
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                        <div class="btn-group" role="group">
+                            <a
+                            class="btn btn-outline-primary @if(todoPage.status == "all") { active }"
+                            href="@routes.AdminController.todos()?status=all&search=@todoPage.search&page=1"
+                            >
+                                All
+                            </a>
 
-            <input type="hidden" name="status" value="@todoPage.status">
-            <input type="hidden" name="page" value="1">
+                            <a
+                            class="btn btn-outline-primary @if(todoPage.status == "active") { active }"
+                            href="@routes.AdminController.todos()?status=active&search=@todoPage.search&page=1"
+                            >
+                                Active
+                            </a>
 
-            <button type="submit">Ara</button>
-        </form>
+                            <a
+                            class="btn btn-outline-primary @if(todoPage.status == "completed") { active }"
+                            href="@routes.AdminController.todos()?status=completed&search=@todoPage.search&page=1"
+                            >
+                                Completed
+                            </a>
+                        </div>
 
-        @if(todoPage.todos.isEmpty) {
-            <p class="empty-message">
-                Arama veya filtreye uygun todo bulunamadı.
-            </p>
-        } else {
-            <table border="1" cellpadding="6">
-                <thead>
-                    <tr>
-                        <th>Owner</th>
-                        <th>Email</th>
-                        <th>Title</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th>Created At</th>
-                    </tr>
-                </thead>
+                        <form method="get" action="@routes.AdminController.todos()" class="d-flex gap-2">
+                            <input
+                            type="text"
+                            name="search"
+                            placeholder="Todo, username veya email ara..."
+                            value="@todoPage.search"
+                            class="form-control"
+                            >
 
-                <tbody>
-                @for(todo <- todoPage.todos) {
-                    <tr>
-                        <td>@todo.username</td>
-                        <td>@todo.email</td>
-                        <td>@todo.title</td>
-                        <td>@todo.description.getOrElse("-")</td>
-                        <td>
-                        @if(todo.isCompleted) {
-                            <span class="status-active">Completed</span>
-                        } else {
-                            <span class="status-passive">Active</span>
-                        }
-                        </td>
-                        <td>@todo.createdAt</td>
-                    </tr>
+                            <input type="hidden" name="status" value="@todoPage.status">
+                            <input type="hidden" name="page" value="1">
+
+                            <button type="submit" class="btn btn-outline-secondary">
+                                Ara
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+
+                @if(todoPage.todos.isEmpty) {
+                    <div class="alert alert-info mb-0">
+                        Arama veya filtreye uygun todo bulunamadı.
+                    </div>
+                } else {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Owner</th>
+                                    <th>Email</th>
+                                    <th>Title</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                            @for(todo <- todoPage.todos) {
+                                <tr>
+                                    <td class="fw-semibold">@todo.username</td>
+                                    <td>@todo.email</td>
+                                    <td>
+                                        <span class="@if(todo.isCompleted) { text-decoration-line-through text-muted }">
+                                        @todo.title
+                                        </span>
+                                    </td>
+                                    <td>@todo.description.getOrElse("-")</td>
+                                    <td>
+                                    @if(todo.isCompleted) {
+                                        <span class="badge text-bg-success">Completed</span>
+                                    } else {
+                                        <span class="badge text-bg-warning">Active</span>
+                                    }
+                                    </td>
+                                    <td>@todo.createdAt</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
                 }
-                </tbody>
-            </table>
-        }
 
-        <div class="pagination">
-            <p>
-                Page @todoPage.currentPage / @todoPage.totalPages
-                - Total: @todoPage.totalItems
-            </p>
+                </div>
+            </div>
 
-            @if(todoPage.currentPage > 1) {
-                <a href="@routes.AdminController.todos()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage - 1)">
-                    Previous
-                </a>
-            }
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4">
+                <p class="text-muted mb-0">
+                    Page @todoPage.currentPage / @todoPage.totalPages
+                    - Total: @todoPage.totalItems
+                </p>
 
-            @if(todoPage.currentPage < todoPage.totalPages) {
-                <a href="@routes.AdminController.todos()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage + 1)">
-                    Next
-                </a>
-            }
+                <div class="btn-group">
+                    @if(todoPage.currentPage > 1) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.AdminController.todos()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage - 1)"
+                        >
+                            Previous
+                        </a>
+                    }
+
+                    @if(todoPage.currentPage < todoPage.totalPages) {
+                        <a
+                        class="btn btn-outline-secondary"
+                        href="@routes.AdminController.todos()?status=@todoPage.status&search=@todoPage.search&page=@(todoPage.currentPage + 1)"
+                        >
+                            Next
+                        </a>
+                    }
+                </div>
+            </div>
+
         </div>
-    </section>
+    </div>
 }
