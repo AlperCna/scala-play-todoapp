@@ -1,6 +1,8 @@
 $(document).ready(function () {
     $(".alert").delay(3000).fadeOut(500);
 
+    const csrfToken = $('meta[name="csrf-token"]').attr("content");
+
     $(".ajax-toggle-form").on("submit", function (event) {
         event.preventDefault();
 
@@ -18,6 +20,7 @@ $(document).ready(function () {
             type: "POST",
             data: form.serialize(),
             headers: {
+                "X-CSRF-Token": csrfToken,
                 "X-Requested-With": "XMLHttpRequest"
             },
             success: function (data) {
@@ -28,11 +31,14 @@ $(document).ready(function () {
                         title.removeClass("completed");
                     }
                 } else {
-                    alert("Todo durumu güncellenemedi.");
+                    alert(data.message || "Todo durumu güncellenemedi.");
                 }
             },
-            error: function () {
-                alert("Todo durumu güncellenirken hata oluştu.");
+            error: function (xhr) {
+                const response = xhr.responseJSON;
+                alert(response && response.message
+                    ? response.message
+                    : "Todo durumu güncellenirken hata oluştu.");
             },
             complete: function () {
                 button.prop("disabled", false);
