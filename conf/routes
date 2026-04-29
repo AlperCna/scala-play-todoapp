@@ -16,6 +16,12 @@ POST    /register                   controllers.AuthController.register()
 POST    /logout                     controllers.AuthController.logout()
 GET     /check-email                controllers.AuthController.checkEmail()
 
+# SSO Authentication
+GET     /auth/google                controllers.SSOController.googleLogin()
+GET     /auth/google/callback       controllers.SSOController.googleCallback()
+GET     /auth/microsoft             controllers.SSOController.microsoftLogin()
+GET     /auth/microsoft/callback    controllers.SSOController.microsoftCallback()
+
 # Todo SSR
 GET     /todos                      controllers.TodoController.index()
 POST    /todos/create               controllers.TodoController.create()

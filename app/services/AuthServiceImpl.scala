@@ -67,4 +67,52 @@ class AuthServiceImpl @Inject()(
         None
     }
   }
+
+  override def loginOrRegisterBySSO(email: String, username: String, provider: String): Future[User] = {
+    val normalizedEmail = email.trim.toLowerCase
+
+    userRepository.findByEmail(normalizedEmail).flatMap {
+      case Some(existingUser) =>
+        if (existingUser.isActive) {
+          Future.successful(existingUser)
+        } else {
+          Future.failed(new RuntimeException("Bu hesap pasif durumda. Lütfen yöneticinize başvurun."))
+        }
+
+      case None =>
+        val domain = normalizedEmail.split("@").lastOption.getOrElse("unknown.local")
+
+        tenantRepository.findByDomain(domain).flatMap { tenantOpt =>
+          val tenantFuture = tenantOpt match {
+            case Some(existing) => Future.successful(existing)
+            case None =>
+              val newTenant = Tenant(
+                id = UUID.randomUUID(),
+                name = domain.split("\\.").headOption.map(_.capitalize).getOrElse("Default") + " Sirketi",
+                domain = domain,
+                createdAt = LocalDateTime.now(),
+                updatedAt = None
+              )
+              tenantRepository.create(newTenant)
+          }
+
+          tenantFuture.flatMap { tenant =>
+            val randomPassword = UUID.randomUUID().toString
+            val user = User(
+              id = UUID.randomUUID(),
+              username = username,
+              email = normalizedEmail,
+              passwordHash = passwordHasher.hash(randomPassword),
+              role = "USER",
+              createdAt = LocalDateTime.now(),
+              updatedAt = None,
+              isActive = true,
+              tenantId = tenant.id
+            )
+
+            userRepository.create(user)
+          }
+        }
+    }
+  }
 }

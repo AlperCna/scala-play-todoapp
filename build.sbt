@@ -10,6 +10,7 @@ scalaVersion := "2.13.18"
 libraryDependencies ++= Seq(
   guice,
   jdbc,
+  ws,
   evolutions,
   "com.microsoft.sqlserver" % "mssql-jdbc" % "12.8.1.jre11",
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test
