@@ -19,7 +19,7 @@ trait TodoService {
 
   def getTodoForEdit(userId: UUID, todoId: UUID): Future[Option[TodoResponse]]
 
-  def createTodo(userId: UUID, request: TodoCreateRequest): Future[TodoResponse]
+  def createTodo(userId: UUID, tenantId: UUID, request: TodoCreateRequest): Future[TodoResponse]
 
   def updateTodo(userId: UUID, todoId: UUID, request: TodoUpdateRequest): Future[Option[TodoResponse]]
 

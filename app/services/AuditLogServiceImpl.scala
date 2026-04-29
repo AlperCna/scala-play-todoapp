@@ -16,6 +16,7 @@ class AuditLogServiceImpl @Inject()(
 
   override def log(
                     userId: Option[UUID],
+                    tenantId: Option[UUID],
                     action: String,
                     request: RequestHeader
                   ): Future[Unit] = {
@@ -26,7 +27,8 @@ class AuditLogServiceImpl @Inject()(
       action = action,
       ipAddress = Some(request.remoteAddress),
       userAgent = request.headers.get("User-Agent"),
-      createdAt = LocalDateTime.now()
+      createdAt = LocalDateTime.now(),
+      tenantId = tenantId
     )
 
     auditLogRepository.create(auditLog).map(_ => ())

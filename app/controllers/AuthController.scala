@@ -71,6 +71,7 @@ class AuthController @Inject()(
           auditLogService
             .log(
               userId = Some(user.id),
+              tenantId = Some(user.tenantId),
               action = "USER_REGISTERED",
               request = request
             )
@@ -117,6 +118,7 @@ class AuthController @Inject()(
             auditLogService
               .log(
                 userId = Some(user.id),
+                tenantId = Some(user.tenantId),
                 action = "USER_LOGIN",
                 request = request
               )
@@ -125,7 +127,8 @@ class AuthController @Inject()(
                   .withSession(
                     "userId" -> user.id.toString,
                     "username" -> user.username,
-                    "role" -> user.role
+                    "role" -> user.role,
+                    "tenantId" -> user.tenantId.toString
                   )
                   .flashing("success" -> s"Welcome, ${user.username}")
               }
@@ -148,9 +151,13 @@ class AuthController @Inject()(
     val currentUserId =
       request.session.get("userId").flatMap(id => Try(UUID.fromString(id)).toOption)
 
+    val currentTenantId =
+      request.session.get("tenantId").flatMap(id => Try(UUID.fromString(id)).toOption)
+
     auditLogService
       .log(
         userId = currentUserId,
+        tenantId = currentTenantId,
         action = "USER_LOGOUT",
         request = request
       )

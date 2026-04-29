@@ -10,9 +10,9 @@ trait AuditLogRepository {
 
   def findByUserId(userId: UUID): Future[Seq[AuditLog]]
 
-  def findRecent(limit: Int): Future[Seq[AuditLog]]
+  def findRecent(tenantId: UUID, limit: Int): Future[Seq[AuditLog]]
 
-  def findPaged(page: Int, pageSize: Int): Future[Seq[AuditLog]]
+  def findPaged(tenantId: UUID, page: Int, pageSize: Int): Future[Seq[AuditLog]]
 
-  def countAll(): Future[Int]
+  def countAll(tenantId: UUID): Future[Int]
 }

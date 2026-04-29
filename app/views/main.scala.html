@@ -10,7 +10,9 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <meta name="csrf-token" content="@helper.CSRF.getToken.value">
+        @play.filters.csrf.CSRF.getToken(request).map { token =>
+            <meta name="csrf-token" content="@token.value">
+        }
 
         <title>@title - Todo Play App</title>
 
@@ -67,7 +69,9 @@
                             </span>
 
                             <form method="post" action="@routes.AuthController.logout()" class="mb-0">
-                                @helper.CSRF.formField
+                                @play.filters.csrf.CSRF.getToken(request).map { token =>
+                                    <input type="hidden" name="@token.name" value="@token.value"/>
+                                }
                                 <button type="submit" class="btn btn-outline-light btn-sm">
                                     Logout
                                 </button>

@@ -14,13 +14,13 @@ trait UserRepository {
 
   def emailExists(email: String): Future[Boolean]
 
-  def countAll(search: String): Future[Int]
+  def countAll(tenantId: UUID, search: String): Future[Int]
 
-  def countActiveUsers(): Future[Int]
+  def countActiveUsers(tenantId: UUID): Future[Int]
 
-  def countPassiveUsers(): Future[Int]
+  def countPassiveUsers(tenantId: UUID): Future[Int]
 
-  def findAllPaged(search: String, page: Int, pageSize: Int): Future[Seq[User]]
+  def findAllPaged(tenantId: UUID, search: String, page: Int, pageSize: Int): Future[Seq[User]]
 
   def setActive(userId: UUID, isActive: Boolean): Future[Boolean]
 }

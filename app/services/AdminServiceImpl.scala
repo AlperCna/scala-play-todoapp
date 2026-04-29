@@ -54,12 +54,12 @@ class AdminServiceImpl @Inject()(
     )
   }
 
-  override def getDashboardStats(): Future[AdminDashboardResponse] = {
+  override def getDashboardStats(tenantId: UUID): Future[AdminDashboardResponse] = {
     for {
-      totalUsers <- userRepository.countAll("")
-      activeUsers <- userRepository.countActiveUsers()
-      passiveUsers <- userRepository.countPassiveUsers()
-      totalTodos <- todoRepository.countAllTodos()
+      totalUsers <- userRepository.countAll(tenantId, "")
+      activeUsers <- userRepository.countActiveUsers(tenantId)
+      passiveUsers <- userRepository.countPassiveUsers(tenantId)
+      totalTodos <- todoRepository.countAllTodos(tenantId)
     } yield {
       AdminDashboardResponse(
         totalUsers = totalUsers,
@@ -70,14 +70,14 @@ class AdminServiceImpl @Inject()(
     }
   }
 
-  override def getUsersPaged(search: String, page: Int, pageSize: Int): Future[UserPageResponse] = {
+  override def getUsersPaged(tenantId: UUID, search: String, page: Int, pageSize: Int): Future[UserPageResponse] = {
     val normalizedSearch = search.trim
     val safePage = if (page < 1) 1 else page
     val safePageSize = if (pageSize < 1) 10 else pageSize
 
     for {
-      totalItems <- userRepository.countAll(normalizedSearch)
-      users <- userRepository.findAllPaged(normalizedSearch, safePage, safePageSize)
+      totalItems <- userRepository.countAll(tenantId, normalizedSearch)
+      users <- userRepository.findAllPaged(tenantId, normalizedSearch, safePage, safePageSize)
     } yield {
       val totalPages =
         if (totalItems == 0) 1
@@ -95,6 +95,7 @@ class AdminServiceImpl @Inject()(
   }
 
   override def getTodosPaged(
+                              tenantId: UUID,
                               status: String,
                               search: String,
                               page: Int,
@@ -108,8 +109,9 @@ class AdminServiceImpl @Inject()(
     val safePageSize = if (pageSize < 1) 10 else pageSize
 
     for {
-      totalItems <- todoRepository.countAllTodosWithFilters(normalizedStatus, normalizedSearch)
+      totalItems <- todoRepository.countAllTodosWithFilters(tenantId, normalizedStatus, normalizedSearch)
       todosWithUsers <- todoRepository.findAllTodosWithUserPaged(
+        tenantId,
         normalizedStatus,
         normalizedSearch,
         safePage,
@@ -135,13 +137,13 @@ class AdminServiceImpl @Inject()(
     }
   }
 
-  override def getAuditLogsPaged(page: Int, pageSize: Int): Future[AuditLogPageResponse] = {
+  override def getAuditLogsPaged(tenantId: UUID, page: Int, pageSize: Int): Future[AuditLogPageResponse] = {
     val safePage = if (page < 1) 1 else page
     val safePageSize = if (pageSize < 1) 10 else pageSize
 
     for {
-      totalItems <- auditLogRepository.countAll()
-      logs <- auditLogRepository.findPaged(safePage, safePageSize)
+      totalItems <- auditLogRepository.countAll(tenantId)
+      logs <- auditLogRepository.findPaged(tenantId, safePage, safePageSize)
     } yield {
       val totalPages =
         if (totalItems == 0) 1

@@ -1,0 +1,28 @@
+@(message: String)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+
+@main("Page Not Found") {
+    <div class="row justify-content-center align-items-center" style="min-vh-75">
+        <div class="col-md-6 text-center">
+            <div class="error-container py-5">
+                <h1 class="display-1 fw-bold text-primary">404</h1>
+                <h2 class="h3 mb-3">Oops! Sayfa Bulunamadı</h2>
+                <p class="lead text-muted mb-4">
+                    Aradığınız sayfa silinmiş, taşınmış veya henüz oluşturulmamış olabilir.
+                </p>
+                @if(message.nonEmpty && !message.contains("Resource not found")) {
+                    <div class="alert alert-light border mb-4">
+                        <small class="text-muted">Detay: @message</small>
+                    </div>
+                }
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="@routes.HomeController.index()" class="btn btn-primary px-4">
+                        Ana Sayfaya Dön
+                    </a>
+                    <button onclick="history.back()" class="btn btn-outline-secondary px-4">
+                        Geri Git
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

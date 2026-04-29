@@ -35,11 +35,12 @@ trait TodoRepository {
                               ): Future[Int]
 
 
-  def countAllTodos(): Future[Int]
+  def countAllTodos(tenantId: UUID): Future[Int]
 
-  def countAllTodosWithFilters(status: String, search: String): Future[Int]
+  def countAllTodosWithFilters(tenantId: UUID, status: String, search: String): Future[Int]
 
   def findAllTodosWithUserPaged(
+                                 tenantId: UUID,
                                  status: String,
                                  search: String,
                                  page: Int,

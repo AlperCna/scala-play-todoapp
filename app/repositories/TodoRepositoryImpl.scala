@@ -24,7 +24,8 @@ class TodoRepositoryImpl @Inject()(
       createdAt = rs.getTimestamp("created_at").toLocalDateTime,
       updatedAt = Option(rs.getTimestamp("updated_at")).map(_.toLocalDateTime),
       deletedAt = Option(rs.getTimestamp("deleted_at")).map(_.toLocalDateTime),
-      isDeleted = rs.getBoolean("is_deleted")
+      isDeleted = rs.getBoolean("is_deleted"),
+      tenantId = UUID.fromString(rs.getString("tenant_id"))
     )
   }
 
@@ -33,7 +34,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         """
           |SELECT id, user_id, title, description, is_completed,
-          |       created_at, updated_at, deleted_at, is_deleted
+          |       created_at, updated_at, deleted_at, is_deleted, tenant_id
           |FROM todos
           |WHERE user_id = ? AND is_deleted = 0
           |ORDER BY created_at DESC
@@ -58,7 +59,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         """
           |SELECT id, user_id, title, description, is_completed,
-          |       created_at, updated_at, deleted_at, is_deleted
+          |       created_at, updated_at, deleted_at, is_deleted, tenant_id
           |FROM todos
           |WHERE id = ? AND user_id = ? AND is_deleted = 0
           |""".stripMargin
@@ -78,9 +79,9 @@ class TodoRepositoryImpl @Inject()(
         """
           |INSERT INTO todos (
           | id, user_id, title, description, is_completed,
-          | created_at, updated_at, deleted_at, is_deleted
+          | created_at, updated_at, deleted_at, is_deleted, tenant_id
           |)
-          |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
@@ -108,6 +109,7 @@ class TodoRepositoryImpl @Inject()(
       }
 
       stmt.setBoolean(9, todo.isDeleted)
+      stmt.setString(10, todo.tenantId.toString)
 
       stmt.executeUpdate()
       todo
@@ -176,7 +178,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         s"""
            |SELECT id, user_id, title, description, is_completed,
-           |       created_at, updated_at, deleted_at, is_deleted
+           |       created_at, updated_at, deleted_at, is_deleted, tenant_id
            |FROM todos
            |WHERE user_id = ? AND is_deleted = 0
            |$statusCondition
@@ -223,7 +225,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         s"""
            |SELECT id, user_id, title, description, is_completed,
-           |       created_at, updated_at, deleted_at, is_deleted
+           |       created_at, updated_at, deleted_at, is_deleted, tenant_id
            |FROM todos
            |WHERE user_id = ? AND is_deleted = 0
            |$statusCondition
@@ -281,7 +283,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         s"""
            |SELECT id, user_id, title, description, is_completed,
-           |       created_at, updated_at, deleted_at, is_deleted
+           |       created_at, updated_at, deleted_at, is_deleted, tenant_id
            |FROM todos
            |WHERE user_id = ? AND is_deleted = 0
            |$statusCondition
@@ -363,23 +365,24 @@ class TodoRepositoryImpl @Inject()(
     }
   }
 
-  override def countAllTodos(): Future[Int] = Future {
+  override def countAllTodos(tenantId: UUID): Future[Int] = Future {
     db.withConnection { conn =>
       val sql =
         """
           |SELECT COUNT(*) AS total
           |FROM todos
-          |WHERE is_deleted = 0
+          |WHERE is_deleted = 0 AND tenant_id = ?
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
       val rs = stmt.executeQuery()
 
       if (rs.next()) rs.getInt("total") else 0
     }
   }
 
-  override def countAllTodosWithFilters(status: String, search: String): Future[Int] = Future {
+  override def countAllTodosWithFilters(tenantId: UUID, status: String, search: String): Future[Int] = Future {
     db.withConnection { conn =>
       val statusCondition = status match {
         case "active" => "AND t.is_completed = 0"
@@ -401,19 +404,20 @@ class TodoRepositoryImpl @Inject()(
            |SELECT COUNT(*) AS total
            |FROM todos t
            |INNER JOIN users u ON t.user_id = u.id
-           |WHERE t.is_deleted = 0
+           |WHERE t.is_deleted = 0 AND t.tenant_id = ?
            |$statusCondition
            |$searchCondition
            |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
 
       if (hasSearch) {
         val keyword = s"%${search.trim}%"
-        stmt.setString(1, keyword)
         stmt.setString(2, keyword)
         stmt.setString(3, keyword)
         stmt.setString(4, keyword)
+        stmt.setString(5, keyword)
       }
 
       val rs = stmt.executeQuery()
@@ -422,6 +426,7 @@ class TodoRepositoryImpl @Inject()(
   }
 
   override def findAllTodosWithUserPaged(
+                                          tenantId: UUID,
                                           status: String,
                                           search: String,
                                           page: Int,
@@ -451,11 +456,11 @@ class TodoRepositoryImpl @Inject()(
         s"""
            |SELECT
            |  t.id, t.user_id, t.title, t.description, t.is_completed,
-           |  t.created_at, t.updated_at, t.deleted_at, t.is_deleted,
+           |  t.created_at, t.updated_at, t.deleted_at, t.is_deleted, t.tenant_id,
            |  u.username, u.email
            |FROM todos t
            |INNER JOIN users u ON t.user_id = u.id
-           |WHERE t.is_deleted = 0
+           |WHERE t.is_deleted = 0 AND t.tenant_id = ?
            |$statusCondition
            |$searchCondition
            |ORDER BY t.created_at DESC
@@ -463,18 +468,19 @@ class TodoRepositoryImpl @Inject()(
            |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
 
       if (hasSearch) {
         val keyword = s"%${search.trim}%"
-        stmt.setString(1, keyword)
         stmt.setString(2, keyword)
         stmt.setString(3, keyword)
         stmt.setString(4, keyword)
-        stmt.setInt(5, offset)
-        stmt.setInt(6, safePageSize)
+        stmt.setString(5, keyword)
+        stmt.setInt(6, offset)
+        stmt.setInt(7, safePageSize)
       } else {
-        stmt.setInt(1, offset)
-        stmt.setInt(2, safePageSize)
+        stmt.setInt(2, offset)
+        stmt.setInt(3, safePageSize)
       }
 
       val rs = stmt.executeQuery()

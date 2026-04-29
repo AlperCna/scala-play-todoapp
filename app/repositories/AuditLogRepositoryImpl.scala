@@ -20,7 +20,8 @@ class AuditLogRepositoryImpl @Inject()(
       action = rs.getString("action"),
       ipAddress = Option(rs.getString("ip_address")),
       userAgent = Option(rs.getString("user_agent")),
-      createdAt = rs.getTimestamp("created_at").toLocalDateTime
+      createdAt = rs.getTimestamp("created_at").toLocalDateTime,
+      tenantId = Option(rs.getString("tenant_id")).map(UUID.fromString)
     )
   }
 
@@ -29,9 +30,9 @@ class AuditLogRepositoryImpl @Inject()(
       val sql =
         """
           |INSERT INTO audit_logs (
-          | id, user_id, action, ip_address, user_agent, created_at
+          | id, user_id, action, ip_address, user_agent, created_at, tenant_id
           |)
-          |VALUES (?, ?, ?, ?, ?, ?)
+          |VALUES (?, ?, ?, ?, ?, ?, ?)
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
@@ -56,6 +57,11 @@ class AuditLogRepositoryImpl @Inject()(
       }
 
       stmt.setTimestamp(6, java.sql.Timestamp.valueOf(auditLog.createdAt))
+      
+      auditLog.tenantId match {
+        case Some(tenantId) => stmt.setString(7, tenantId.toString)
+        case None           => stmt.setNull(7, Types.VARCHAR)
+      }
 
       stmt.executeUpdate()
       auditLog
@@ -66,7 +72,7 @@ class AuditLogRepositoryImpl @Inject()(
     db.withConnection { conn =>
       val sql =
         """
-          |SELECT id, user_id, action, ip_address, user_agent, created_at
+          |SELECT id, user_id, action, ip_address, user_agent, created_at, tenant_id
           |FROM audit_logs
           |WHERE user_id = ?
           |ORDER BY created_at DESC
@@ -86,20 +92,22 @@ class AuditLogRepositoryImpl @Inject()(
     }
   }
 
-  override def findRecent(limit: Int): Future[Seq[AuditLog]] = Future {
+  override def findRecent(tenantId: UUID, limit: Int): Future[Seq[AuditLog]] = Future {
     db.withConnection { conn =>
       val safeLimit = if (limit < 1) 10 else limit
 
       val sql =
         """
-          |SELECT id, user_id, action, ip_address, user_agent, created_at
+          |SELECT id, user_id, action, ip_address, user_agent, created_at, tenant_id
           |FROM audit_logs
+          |WHERE tenant_id = ?
           |ORDER BY created_at DESC
           |OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
-      stmt.setInt(1, safeLimit)
+      stmt.setString(1, tenantId.toString)
+      stmt.setInt(2, safeLimit)
 
       val rs = stmt.executeQuery()
       val logs = scala.collection.mutable.ListBuffer[AuditLog]()
@@ -112,7 +120,7 @@ class AuditLogRepositoryImpl @Inject()(
     }
   }
 
-  override def findPaged(page: Int, pageSize: Int): Future[Seq[AuditLog]] = Future {
+  override def findPaged(tenantId: UUID, page: Int, pageSize: Int): Future[Seq[AuditLog]] = Future {
     db.withConnection { conn =>
       val safePage = if (page < 1) 1 else page
       val safePageSize = if (pageSize < 1) 10 else pageSize
@@ -120,15 +128,17 @@ class AuditLogRepositoryImpl @Inject()(
 
       val sql =
         """
-          |SELECT id, user_id, action, ip_address, user_agent, created_at
+          |SELECT id, user_id, action, ip_address, user_agent, created_at, tenant_id
           |FROM audit_logs
+          |WHERE tenant_id = ?
           |ORDER BY created_at DESC
           |OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
-      stmt.setInt(1, offset)
-      stmt.setInt(2, safePageSize)
+      stmt.setString(1, tenantId.toString)
+      stmt.setInt(2, offset)
+      stmt.setInt(3, safePageSize)
 
       val rs = stmt.executeQuery()
       val logs = scala.collection.mutable.ListBuffer[AuditLog]()
@@ -141,15 +151,17 @@ class AuditLogRepositoryImpl @Inject()(
     }
   }
 
-  override def countAll(): Future[Int] = Future {
+  override def countAll(tenantId: UUID): Future[Int] = Future {
     db.withConnection { conn =>
       val sql =
         """
           |SELECT COUNT(*) AS total
           |FROM audit_logs
+          |WHERE tenant_id = ?
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
       val rs = stmt.executeQuery()
 
       if (rs.next()) rs.getInt("total") else 0

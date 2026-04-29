@@ -11,5 +11,6 @@ class Module extends AbstractModule {
     bind(classOf[AdminService]).to(classOf[AdminServiceImpl])
     bind(classOf[AuditLogRepository]).to(classOf[AuditLogRepositoryImpl])
     bind(classOf[AuditLogService]).to(classOf[AuditLogServiceImpl])
+    bind(classOf[TenantRepository]).to(classOf[TenantRepositoryImpl])
   }
 }

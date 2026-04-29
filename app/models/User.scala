@@ -11,5 +11,6 @@ case class User(
                  role: String,
                  createdAt: LocalDateTime,
                  updatedAt: Option[LocalDateTime],
-                 isActive: Boolean
+                 isActive: Boolean,
+                 tenantId: UUID
                )

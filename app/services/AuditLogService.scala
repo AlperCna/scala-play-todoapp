@@ -9,6 +9,7 @@ trait AuditLogService {
 
   def log(
            userId: Option[UUID],
+           tenantId: Option[UUID],
            action: String,
            request: RequestHeader
          ): Future[Unit]

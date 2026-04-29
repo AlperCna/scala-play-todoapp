@@ -28,6 +28,12 @@ class TodoController @Inject()(
     }
   }
 
+  private def getCurrentTenantId(request: RequestHeader): Option[UUID] = {
+    request.session.get("tenantId").flatMap { id =>
+      Try(UUID.fromString(id)).toOption
+    }
+  }
+
   private def getStatus(request: RequestHeader): String = {
     request.getQueryString("status").getOrElse("all")
   }
@@ -82,21 +88,32 @@ class TodoController @Inject()(
               description = data.description.map(_.trim).filter(_.nonEmpty)
             )
 
-            todoService.createTodo(userId, dto).flatMap { createdTodo =>
-              auditLogService
-                .log(
-                  userId = Some(userId),
-                  action = s"TODO_CREATED: ${createdTodo.title}",
-                  request = request
-                )
-                .map { _ =>
-                  Redirect(routes.TodoController.index())
-                    .flashing("success" -> s"Todo created: ${createdTodo.title}")
+            val tenantIdOpt = getCurrentTenantId(request)
+            
+            tenantIdOpt match {
+              case Some(tenantId) =>
+                todoService.createTodo(userId, tenantId, dto).flatMap { createdTodo =>
+                  auditLogService
+                    .log(
+                      userId = Some(userId),
+                      tenantId = Some(tenantId),
+                      action = s"TODO_CREATED: ${createdTodo.title}",
+                      request = request
+                    )
+                    .map { _ =>
+                      Redirect(routes.TodoController.index())
+                        .flashing("success" -> s"Todo created: ${createdTodo.title}")
+                    }
+                }.recover {
+                  case _ =>
+                    Redirect(routes.TodoController.index())
+                      .flashing("error" -> "Todo oluşturulurken beklenmeyen bir hata oluştu.")
                 }
-            }.recover {
-              case _ =>
-                Redirect(routes.TodoController.index())
-                  .flashing("error" -> "Todo oluşturulurken beklenmeyen bir hata oluştu.")
+              case None =>
+                Future.successful(
+                  Redirect(routes.AuthController.loginPage())
+                    .flashing("error" -> "Oturum süreniz dolmuş veya geçersiz.")
+                )
             }
           }
         )
@@ -170,6 +187,7 @@ class TodoController @Inject()(
                     auditLogService
                       .log(
                         userId = Some(userId),
+                        tenantId = getCurrentTenantId(request),
                         action = s"TODO_UPDATED: ${updatedTodo.title}",
                         request = request
                       )
@@ -216,6 +234,7 @@ class TodoController @Inject()(
                 auditLogService
                   .log(
                     userId = Some(userId),
+                    tenantId = getCurrentTenantId(request),
                     action = s"TODO_DELETED: $id",
                     request = request
                   )
@@ -263,6 +282,7 @@ class TodoController @Inject()(
                 auditLogService
                   .log(
                     userId = Some(userId),
+                    tenantId = getCurrentTenantId(request),
                     action = s"TODO_TOGGLED: ${updatedTodo.title} -> ${updatedTodo.isCompleted}",
                     request = request
                   )

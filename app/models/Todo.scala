@@ -12,5 +12,6 @@ case class Todo(
                  createdAt: LocalDateTime,
                  updatedAt: Option[LocalDateTime],
                  deletedAt: Option[LocalDateTime],
-                 isDeleted: Boolean
+                 isDeleted: Boolean,
+                 tenantId: UUID
                )

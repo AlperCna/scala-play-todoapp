@@ -9,5 +9,6 @@ case class AuditLog(
                      action: String,
                      ipAddress: Option[String],
                      userAgent: Option[String],
-                     createdAt: LocalDateTime
+                     createdAt: LocalDateTime,
+                     tenantId: Option[UUID]
                    )

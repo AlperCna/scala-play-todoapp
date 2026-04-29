@@ -48,6 +48,7 @@ class TodoServiceImpl @Inject()(
 
   override def createTodo(
                            userId: UUID,
+                           tenantId: UUID,
                            request: TodoCreateRequest
                          ): Future[TodoResponse] = {
     val todo = Todo(
@@ -59,7 +60,8 @@ class TodoServiceImpl @Inject()(
       createdAt = LocalDateTime.now(),
       updatedAt = None,
       deletedAt = None,
-      isDeleted = false
+      isDeleted = false,
+      tenantId = tenantId
     )
 
     todoRepository.create(todo).map(toResponse)

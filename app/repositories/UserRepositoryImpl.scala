@@ -22,7 +22,8 @@ class UserRepositoryImpl @Inject()(
       role = rs.getString("role"),
       createdAt = rs.getTimestamp("created_at").toLocalDateTime,
       updatedAt = Option(rs.getTimestamp("updated_at")).map(_.toLocalDateTime),
-      isActive = rs.getBoolean("is_active")
+      isActive = rs.getBoolean("is_active"),
+      tenantId = UUID.fromString(rs.getString("tenant_id"))
     )
   }
 
@@ -30,7 +31,7 @@ class UserRepositoryImpl @Inject()(
     db.withConnection { conn =>
       val sql =
         """
-          |SELECT id, username, email, password_hash, role, created_at, updated_at, is_active
+          |SELECT id, username, email, password_hash, role, created_at, updated_at, is_active, tenant_id
           |FROM users
           |WHERE email = ?
           |""".stripMargin
@@ -47,7 +48,7 @@ class UserRepositoryImpl @Inject()(
     db.withConnection { conn =>
       val sql =
         """
-          |SELECT id, username, email, password_hash, role, created_at, updated_at, is_active
+          |SELECT id, username, email, password_hash, role, created_at, updated_at, is_active, tenant_id
           |FROM users
           |WHERE id = ?
           |""".stripMargin
@@ -65,9 +66,9 @@ class UserRepositoryImpl @Inject()(
       val sql =
         """
           |INSERT INTO users (
-          | id, username, email, password_hash, role, created_at, updated_at, is_active
+          | id, username, email, password_hash, role, created_at, updated_at, is_active, tenant_id
           |)
-          |VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
@@ -84,6 +85,7 @@ class UserRepositoryImpl @Inject()(
       }
 
       stmt.setBoolean(8, user.isActive)
+      stmt.setString(9, user.tenantId.toString)
 
       stmt.executeUpdate()
       user
@@ -107,14 +109,14 @@ class UserRepositoryImpl @Inject()(
     }
   }
 
-  override def countAll(search: String): Future[Int] = Future {
+  override def countAll(tenantId: UUID, search: String): Future[Int] = Future {
     db.withConnection { conn =>
       val normalizedSearch = search.trim
       val hasSearch = normalizedSearch.nonEmpty
 
       val searchCondition =
         if (hasSearch) {
-          "WHERE username LIKE ? OR email LIKE ?"
+          "AND (username LIKE ? OR email LIKE ?)"
         } else {
           ""
         }
@@ -123,15 +125,17 @@ class UserRepositoryImpl @Inject()(
         s"""
            |SELECT COUNT(*) AS total
            |FROM users
+           |WHERE tenant_id = ?
            |$searchCondition
            |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
 
       if (hasSearch) {
         val keyword = s"%$normalizedSearch%"
-        stmt.setString(1, keyword)
         stmt.setString(2, keyword)
+        stmt.setString(3, keyword)
       }
 
       val rs = stmt.executeQuery()
@@ -139,32 +143,34 @@ class UserRepositoryImpl @Inject()(
     }
   }
 
-  override def countActiveUsers(): Future[Int] = Future {
+  override def countActiveUsers(tenantId: UUID): Future[Int] = Future {
     db.withConnection { conn =>
       val sql =
         """
           |SELECT COUNT(*) AS total
           |FROM users
-          |WHERE is_active = 1
+          |WHERE is_active = 1 AND tenant_id = ?
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
       val rs = stmt.executeQuery()
 
       if (rs.next()) rs.getInt("total") else 0
     }
   }
 
-  override def countPassiveUsers(): Future[Int] = Future {
+  override def countPassiveUsers(tenantId: UUID): Future[Int] = Future {
     db.withConnection { conn =>
       val sql =
         """
           |SELECT COUNT(*) AS total
           |FROM users
-          |WHERE is_active = 0
+          |WHERE is_active = 0 AND tenant_id = ?
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
       val rs = stmt.executeQuery()
 
       if (rs.next()) rs.getInt("total") else 0
@@ -172,6 +178,7 @@ class UserRepositoryImpl @Inject()(
   }
 
   override def findAllPaged(
+                             tenantId: UUID,
                              search: String,
                              page: Int,
                              pageSize: Int
@@ -186,31 +193,33 @@ class UserRepositoryImpl @Inject()(
 
       val searchCondition =
         if (hasSearch) {
-          "WHERE username LIKE ? OR email LIKE ?"
+          "AND (username LIKE ? OR email LIKE ?)"
         } else {
           ""
         }
 
       val sql =
         s"""
-           |SELECT id, username, email, password_hash, role, created_at, updated_at, is_active
+           |SELECT id, username, email, password_hash, role, created_at, updated_at, is_active, tenant_id
            |FROM users
+           |WHERE tenant_id = ?
            |$searchCondition
            |ORDER BY created_at DESC
            |OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
            |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, tenantId.toString)
 
       if (hasSearch) {
         val keyword = s"%$normalizedSearch%"
-        stmt.setString(1, keyword)
         stmt.setString(2, keyword)
-        stmt.setInt(3, offset)
-        stmt.setInt(4, safePageSize)
+        stmt.setString(3, keyword)
+        stmt.setInt(4, offset)
+        stmt.setInt(5, safePageSize)
       } else {
-        stmt.setInt(1, offset)
-        stmt.setInt(2, safePageSize)
+        stmt.setInt(2, offset)
+        stmt.setInt(3, safePageSize)
       }
 
       val rs = stmt.executeQuery()

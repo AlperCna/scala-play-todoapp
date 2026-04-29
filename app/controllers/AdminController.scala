@@ -26,6 +26,12 @@ class AdminController @Inject()(
     request.session.get("role").contains("ADMIN")
   }
 
+  private def getCurrentTenantId(request: RequestHeader): Option[UUID] = {
+    request.session.get("tenantId").flatMap { id =>
+      Try(UUID.fromString(id)).toOption
+    }
+  }
+
   private def unauthorizedResult(request: RequestHeader): Result = {
     if (!isLoggedIn(request)) {
       Redirect(routes.AuthController.loginPage())
@@ -53,8 +59,13 @@ class AdminController @Inject()(
 
   def dashboard = Action.async { implicit request =>
     if (isAdmin(request)) {
-      adminService.getDashboardStats().map { stats =>
-        Ok(views.html.admin(stats))
+      getCurrentTenantId(request) match {
+        case Some(tenantId) =>
+          adminService.getDashboardStats(tenantId).map { stats =>
+            Ok(views.html.admin(stats))
+          }
+        case None =>
+          Future.successful(unauthorizedResult(request))
       }
     } else {
       Future.successful(unauthorizedResult(request))
@@ -63,11 +74,16 @@ class AdminController @Inject()(
 
   def users = Action.async { implicit request =>
     if (isAdmin(request)) {
-      val search = getSearch(request)
-      val page = getPage(request)
+      getCurrentTenantId(request) match {
+        case Some(tenantId) =>
+          val search = getSearch(request)
+          val page = getPage(request)
 
-      adminService.getUsersPaged(search, page, pageSize).map { userPage =>
-        Ok(views.html.adminUsers(userPage))
+          adminService.getUsersPaged(tenantId, search, page, pageSize).map { userPage =>
+            Ok(views.html.adminUsers(userPage))
+          }
+        case None =>
+          Future.successful(unauthorizedResult(request))
       }
     } else {
       Future.successful(unauthorizedResult(request))
@@ -76,12 +92,17 @@ class AdminController @Inject()(
 
   def todos = Action.async { implicit request =>
     if (isAdmin(request)) {
-      val status = getStatus(request)
-      val search = getSearch(request)
-      val page = getPage(request)
+      getCurrentTenantId(request) match {
+        case Some(tenantId) =>
+          val status = getStatus(request)
+          val search = getSearch(request)
+          val page = getPage(request)
 
-      adminService.getTodosPaged(status, search, page, pageSize).map { todoPage =>
-        Ok(views.html.adminTodos(todoPage))
+          adminService.getTodosPaged(tenantId, status, search, page, pageSize).map { todoPage =>
+            Ok(views.html.adminTodos(todoPage))
+          }
+        case None =>
+          Future.successful(unauthorizedResult(request))
       }
     } else {
       Future.successful(unauthorizedResult(request))
@@ -90,10 +111,15 @@ class AdminController @Inject()(
 
   def auditLogs = Action.async { implicit request =>
     if (isAdmin(request)) {
-      val page = getPage(request)
+      getCurrentTenantId(request) match {
+        case Some(tenantId) =>
+          val page = getPage(request)
 
-      adminService.getAuditLogsPaged(page, pageSize).map { logPage =>
-        Ok(views.html.adminAuditLogs(logPage))
+          adminService.getAuditLogsPaged(tenantId, page, pageSize).map { logPage =>
+            Ok(views.html.adminAuditLogs(logPage))
+          }
+        case None =>
+          Future.successful(unauthorizedResult(request))
       }
     } else {
       Future.successful(unauthorizedResult(request))
