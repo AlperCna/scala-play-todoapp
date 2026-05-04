@@ -69,6 +69,22 @@
                             }
                         </div>
 
+                        <div class="mb-3">
+                            <label for="todo-dueDate-input" class="form-label">Son Tarih (Opsiyonel)</label>
+                            <input
+                            type="datetime-local"
+                            name="dueDate"
+                            id="todo-dueDate-input"
+                            value="@createForm("dueDate").value.getOrElse("")"
+                            class="form-control @if(createForm("dueDate").hasErrors) { is-invalid }"
+                            >
+                            @createForm("dueDate").errors.map { error =>
+                                <div class="invalid-feedback d-block">
+                                    @error.message
+                                </div>
+                            }
+                        </div>
+
                         <button type="submit" class="btn btn-primary">
                             Ekle
                         </button>
@@ -151,7 +167,13 @@
                                         </div>
 
                                         @todo.description.map { desc =>
-                                            <p class="text-muted mb-0">@desc</p>
+                                            <p class="text-muted mb-1">@desc</p>
+                                        }
+
+                                        @todo.dueDate.map { date =>
+                                            <div class="text-muted small">
+                                                <i class="bi bi-calendar-event"></i> Son Tarih: @date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                                            </div>
                                         }
                                     </div>
 

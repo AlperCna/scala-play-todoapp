@@ -13,5 +13,6 @@ case class Todo(
                  updatedAt: Option[LocalDateTime],
                  deletedAt: Option[LocalDateTime],
                  isDeleted: Boolean,
-                 tenantId: UUID
-               )
+                 tenantId: UUID,
+                 dueDate: Option[LocalDateTime]
+               )

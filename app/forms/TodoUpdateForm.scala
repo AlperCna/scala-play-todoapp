@@ -6,7 +6,8 @@ import play.api.data.Forms._
 case class TodoUpdateForm(
                            title: String,
                            description: Option[String],
-                           isCompleted: Boolean
+                           isCompleted: Boolean,
+                           dueDate: Option[java.time.LocalDateTime]
                          )
 
 object TodoUpdateForm {
@@ -17,7 +18,8 @@ object TodoUpdateForm {
         .verifying("Todo başlığı boş olamaz.", value => value.trim.nonEmpty),
 
       "description" -> optional(text(maxLength = 1000)),
-      "isCompleted" -> boolean
+      "isCompleted" -> boolean,
+      "dueDate" -> optional(localDateTime("yyyy-MM-dd'T'HH:mm"))
     )(TodoUpdateForm.apply)(TodoUpdateForm.unapply)
   )
 }

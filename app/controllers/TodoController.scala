@@ -84,8 +84,9 @@ class TodoController @Inject()(
           },
           data => {
             val dto = TodoCreateRequest(
-              title = data.title.trim,
-              description = data.description.map(_.trim).filter(_.nonEmpty)
+              title       = data.title.trim,
+              description = data.description.map(_.trim).filter(_.nonEmpty),
+              dueDate     = data.dueDate
             )
 
             val tenantIdOpt = getCurrentTenantId(request)
@@ -135,9 +136,10 @@ class TodoController @Inject()(
               case Some(todo) =>
                 val form = TodoUpdateForm.form.fill(
                   TodoUpdateForm(
-                    title = todo.title,
+                    title       = todo.title,
                     description = todo.description,
-                    isCompleted = todo.isCompleted
+                    isCompleted = todo.isCompleted,
+                    dueDate     = todo.dueDate
                   )
                 )
 
@@ -177,9 +179,10 @@ class TodoController @Inject()(
               },
               data => {
                 val dto = TodoUpdateRequest(
-                  title = data.title.trim,
+                  title       = data.title.trim,
                   description = data.description.map(_.trim).filter(_.nonEmpty),
-                  isCompleted = data.isCompleted
+                  isCompleted = data.isCompleted,
+                  dueDate     = data.dueDate
                 )
 
                 todoService.updateTodo(userId, todoId, dto).flatMap {

@@ -16,16 +16,17 @@ class TodoRepositoryImpl @Inject()(
 
   private def mapTodo(rs: ResultSet): Todo = {
     Todo(
-      id = UUID.fromString(rs.getString("id")),
-      userId = UUID.fromString(rs.getString("user_id")),
-      title = rs.getString("title"),
+      id          = UUID.fromString(rs.getString("id")),
+      userId      = UUID.fromString(rs.getString("user_id")),
+      title       = rs.getString("title"),
       description = Option(rs.getString("description")),
       isCompleted = rs.getBoolean("is_completed"),
-      createdAt = rs.getTimestamp("created_at").toLocalDateTime,
-      updatedAt = Option(rs.getTimestamp("updated_at")).map(_.toLocalDateTime),
-      deletedAt = Option(rs.getTimestamp("deleted_at")).map(_.toLocalDateTime),
-      isDeleted = rs.getBoolean("is_deleted"),
-      tenantId = UUID.fromString(rs.getString("tenant_id"))
+      createdAt   = rs.getTimestamp("created_at").toLocalDateTime,
+      updatedAt   = Option(rs.getTimestamp("updated_at")).map(_.toLocalDateTime),
+      deletedAt   = Option(rs.getTimestamp("deleted_at")).map(_.toLocalDateTime),
+      isDeleted   = rs.getBoolean("is_deleted"),
+      tenantId    = UUID.fromString(rs.getString("tenant_id")),
+      dueDate     = Option(rs.getTimestamp("due_date")).map(_.toLocalDateTime)
     )
   }
 
@@ -34,7 +35,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         """
           |SELECT id, user_id, title, description, is_completed,
-          |       created_at, updated_at, deleted_at, is_deleted, tenant_id
+          |       created_at, updated_at, deleted_at, is_deleted, tenant_id, due_date
           |FROM todos
           |WHERE user_id = ? AND is_deleted = 0
           |ORDER BY created_at DESC
@@ -59,7 +60,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         """
           |SELECT id, user_id, title, description, is_completed,
-          |       created_at, updated_at, deleted_at, is_deleted, tenant_id
+          |       created_at, updated_at, deleted_at, is_deleted, tenant_id, due_date
           |FROM todos
           |WHERE id = ? AND user_id = ? AND is_deleted = 0
           |""".stripMargin
@@ -79,9 +80,9 @@ class TodoRepositoryImpl @Inject()(
         """
           |INSERT INTO todos (
           | id, user_id, title, description, is_completed,
-          | created_at, updated_at, deleted_at, is_deleted, tenant_id
+          | created_at, updated_at, deleted_at, is_deleted, tenant_id, due_date
           |)
-          |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           |""".stripMargin
 
       val stmt = conn.prepareStatement(sql)
@@ -92,7 +93,7 @@ class TodoRepositoryImpl @Inject()(
 
       todo.description match {
         case Some(value) => stmt.setString(4, value)
-        case None => stmt.setNull(4, Types.NVARCHAR)
+        case None        => stmt.setNull(4, Types.NVARCHAR)
       }
 
       stmt.setBoolean(5, todo.isCompleted)
@@ -100,16 +101,21 @@ class TodoRepositoryImpl @Inject()(
 
       todo.updatedAt match {
         case Some(value) => stmt.setTimestamp(7, java.sql.Timestamp.valueOf(value))
-        case None => stmt.setNull(7, Types.TIMESTAMP)
+        case None        => stmt.setNull(7, Types.TIMESTAMP)
       }
 
       todo.deletedAt match {
         case Some(value) => stmt.setTimestamp(8, java.sql.Timestamp.valueOf(value))
-        case None => stmt.setNull(8, Types.TIMESTAMP)
+        case None        => stmt.setNull(8, Types.TIMESTAMP)
       }
 
       stmt.setBoolean(9, todo.isDeleted)
       stmt.setString(10, todo.tenantId.toString)
+
+      todo.dueDate match {
+        case Some(value) => stmt.setTimestamp(11, java.sql.Timestamp.valueOf(value))
+        case None        => stmt.setNull(11, Types.TIMESTAMP)
+      }
 
       stmt.executeUpdate()
       todo
@@ -124,7 +130,8 @@ class TodoRepositoryImpl @Inject()(
           |SET title = ?,
           |    description = ?,
           |    is_completed = ?,
-          |    updated_at = ?
+          |    updated_at = ?,
+          |    due_date = ?
           |WHERE id = ? AND user_id = ? AND is_deleted = 0
           |""".stripMargin
 
@@ -134,13 +141,19 @@ class TodoRepositoryImpl @Inject()(
 
       todo.description match {
         case Some(value) => stmt.setString(2, value)
-        case None => stmt.setNull(2, Types.NVARCHAR)
+        case None        => stmt.setNull(2, Types.NVARCHAR)
       }
 
       stmt.setBoolean(3, todo.isCompleted)
       stmt.setTimestamp(4, java.sql.Timestamp.valueOf(LocalDateTime.now()))
-      stmt.setString(5, todo.id.toString)
-      stmt.setString(6, todo.userId.toString)
+
+      todo.dueDate match {
+        case Some(value) => stmt.setTimestamp(5, java.sql.Timestamp.valueOf(value))
+        case None        => stmt.setNull(5, Types.TIMESTAMP)
+      }
+
+      stmt.setString(6, todo.id.toString)
+      stmt.setString(7, todo.userId.toString)
 
       stmt.executeUpdate()
       todo.copy(updatedAt = Some(LocalDateTime.now()))
@@ -178,7 +191,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         s"""
            |SELECT id, user_id, title, description, is_completed,
-           |       created_at, updated_at, deleted_at, is_deleted, tenant_id
+           |       created_at, updated_at, deleted_at, is_deleted, tenant_id, due_date
            |FROM todos
            |WHERE user_id = ? AND is_deleted = 0
            |$statusCondition
@@ -225,7 +238,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         s"""
            |SELECT id, user_id, title, description, is_completed,
-           |       created_at, updated_at, deleted_at, is_deleted, tenant_id
+           |       created_at, updated_at, deleted_at, is_deleted, tenant_id, due_date
            |FROM todos
            |WHERE user_id = ? AND is_deleted = 0
            |$statusCondition
@@ -283,7 +296,7 @@ class TodoRepositoryImpl @Inject()(
       val sql =
         s"""
            |SELECT id, user_id, title, description, is_completed,
-           |       created_at, updated_at, deleted_at, is_deleted, tenant_id
+           |       created_at, updated_at, deleted_at, is_deleted, tenant_id, due_date
            |FROM todos
            |WHERE user_id = ? AND is_deleted = 0
            |$statusCondition
@@ -456,7 +469,7 @@ class TodoRepositoryImpl @Inject()(
         s"""
            |SELECT
            |  t.id, t.user_id, t.title, t.description, t.is_completed,
-           |  t.created_at, t.updated_at, t.deleted_at, t.is_deleted, t.tenant_id,
+           |  t.created_at, t.updated_at, t.deleted_at, t.is_deleted, t.tenant_id, t.due_date,
            |  u.username, u.email
            |FROM todos t
            |INNER JOIN users u ON t.user_id = u.id
@@ -491,6 +504,33 @@ class TodoRepositoryImpl @Inject()(
       }
 
       todos.toSeq
+    }
+  }
+
+  override def findDueTomorrow(): Future[Seq[(Todo, String, String)]] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |SELECT
+          |  t.id, t.user_id, t.title, t.description, t.is_completed,
+          |  t.created_at, t.updated_at, t.deleted_at, t.is_deleted, t.tenant_id, t.due_date,
+          |  u.email, u.username
+          |FROM todos t
+          |INNER JOIN users u ON t.user_id = u.id
+          |WHERE t.is_deleted = 0
+          |  AND t.is_completed = 0
+          |  AND CAST(t.due_date AS DATE) = CAST(DATEADD(day, 1, GETDATE()) AS DATE)
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      val rs   = stmt.executeQuery()
+      val result = scala.collection.mutable.ListBuffer[(Todo, String, String)]()
+
+      while (rs.next()) {
+        result += ((mapTodo(rs), rs.getString("email"), rs.getString("username")))
+      }
+
+      result.toSeq
     }
   }
 }

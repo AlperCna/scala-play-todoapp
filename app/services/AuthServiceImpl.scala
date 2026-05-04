@@ -1,5 +1,7 @@
 package services
 
+import actors.EmailActor.SendWelcomeEmail
+import actors.EmailActorInitializer
 import dtos.{LoginRequest, RegisterRequest}
 import models.{Tenant, User}
 import repositories.{TenantRepository, UserRepository}
@@ -11,10 +13,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AuthServiceImpl @Inject()(
-                                 userRepository: UserRepository,
-                                 tenantRepository: TenantRepository,
-                                 passwordHasher: PasswordHasher
-                               )(implicit ec: ExecutionContext) extends AuthService {
+  userRepository:   UserRepository,
+  tenantRepository: TenantRepository,
+  passwordHasher:   PasswordHasher,
+  emailActorInit:   EmailActorInitializer
+)(implicit ec: ExecutionContext) extends AuthService {
+
+  private val emailActor = emailActorInit.emailActor
 
   override def register(request: RegisterRequest): Future[User] = {
     userRepository.findByEmail(request.email).flatMap {
@@ -40,18 +45,22 @@ class AuthServiceImpl @Inject()(
 
           tenantFuture.flatMap { tenant =>
             val user = User(
-              id = UUID.randomUUID(),
-              username = request.username,
-              email = request.email,
+              id           = UUID.randomUUID(),
+              username     = request.username,
+              email        = request.email,
               passwordHash = passwordHasher.hash(request.password),
-              role = "USER",
-              createdAt = LocalDateTime.now(),
-              updatedAt = None,
-              isActive = true,
-              tenantId = tenant.id
+              role         = "USER",
+              createdAt    = LocalDateTime.now(),
+              updatedAt    = None,
+              isActive     = true,
+              tenantId     = tenant.id
             )
 
-            userRepository.create(user)
+            userRepository.create(user).map { createdUser =>
+              // Welcome email gönder (fire & forget)
+              emailActor ! SendWelcomeEmail(createdUser.email, createdUser.username)
+              createdUser
+            }
           }
         }
     }
@@ -99,18 +108,22 @@ class AuthServiceImpl @Inject()(
           tenantFuture.flatMap { tenant =>
             val randomPassword = UUID.randomUUID().toString
             val user = User(
-              id = UUID.randomUUID(),
-              username = username,
-              email = normalizedEmail,
+              id           = UUID.randomUUID(),
+              username     = username,
+              email        = normalizedEmail,
               passwordHash = passwordHasher.hash(randomPassword),
-              role = "USER",
-              createdAt = LocalDateTime.now(),
-              updatedAt = None,
-              isActive = true,
-              tenantId = tenant.id
+              role         = "USER",
+              createdAt    = LocalDateTime.now(),
+              updatedAt    = None,
+              isActive     = true,
+              tenantId     = tenant.id
             )
 
-            userRepository.create(user)
+            userRepository.create(user).map { createdUser =>
+              // SSO ile ilk kez kayıt: welcome email gönder
+              emailActor ! SendWelcomeEmail(createdUser.email, createdUser.username)
+              createdUser
+            }
           }
         }
     }

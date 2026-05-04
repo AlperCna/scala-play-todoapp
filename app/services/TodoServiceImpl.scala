@@ -1,8 +1,10 @@
 package services
 
-import dtos.{TodoCreateRequest, TodoResponse, TodoUpdateRequest, TodoPageResponse}
+import actors.EmailActor._
+import actors.EmailActorInitializer
+import dtos.{TodoCreateRequest, TodoPageResponse, TodoResponse, TodoUpdateRequest}
 import models.Todo
-import repositories.TodoRepository
+import repositories.{TodoRepository, UserRepository}
 
 import java.time.LocalDateTime
 import java.util.UUID
@@ -11,15 +13,20 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TodoServiceImpl @Inject()(
-                                 todoRepository: TodoRepository
+                                 todoRepository: TodoRepository,
+                                 userRepository: UserRepository,
+                                 emailActorInit: EmailActorInitializer
                                )(implicit ec: ExecutionContext) extends TodoService {
+
+  private val emailActor = emailActorInit.emailActor
 
   private def toResponse(todo: Todo): TodoResponse = {
     TodoResponse(
       id = todo.id,
       title = todo.title,
       description = todo.description,
-      isCompleted = todo.isCompleted
+      isCompleted = todo.isCompleted,
+      dueDate = todo.dueDate
     )
   }
 
@@ -61,10 +68,23 @@ class TodoServiceImpl @Inject()(
       updatedAt = None,
       deletedAt = None,
       isDeleted = false,
-      tenantId = tenantId
+      tenantId = tenantId,
+      dueDate = request.dueDate
     )
 
-    todoRepository.create(todo).map(toResponse)
+    todoRepository.create(todo).flatMap { savedTodo =>
+      userRepository.findById(userId).foreach {
+        case Some(user) =>
+          emailActor ! SendTodoCreatedEmail(
+            to = user.email,
+            username = user.username,
+            title = savedTodo.title,
+            dueDate = savedTodo.dueDate
+          )
+        case None =>
+      }
+      Future.successful(toResponse(savedTodo))
+    }
   }
 
   override def updateTodo(
@@ -78,7 +98,8 @@ class TodoServiceImpl @Inject()(
           title = request.title,
           description = request.description,
           isCompleted = request.isCompleted,
-          updatedAt = Some(LocalDateTime.now())
+          updatedAt = Some(LocalDateTime.now()),
+          dueDate = request.dueDate
         )
 
         todoRepository.update(updatedTodo).map { savedTodo =>
@@ -94,7 +115,25 @@ class TodoServiceImpl @Inject()(
                            userId: UUID,
                            todoId: UUID
                          ): Future[Boolean] = {
-    todoRepository.delete(todoId, userId)
+    todoRepository.findByIdAndUserId(todoId, userId).flatMap {
+      case Some(todo) =>
+        todoRepository.delete(todoId, userId).flatMap { deleted =>
+          if (deleted) {
+            userRepository.findById(userId).foreach {
+              case Some(user) =>
+                emailActor ! SendTodoDeletedEmail(
+                  to = user.email,
+                  username = user.username,
+                  title = todo.title
+                )
+              case None =>
+            }
+          }
+          Future.successful(deleted)
+        }
+      case None =>
+        Future.successful(false)
+    }
   }
 
   override def toggleTodo(
@@ -103,13 +142,25 @@ class TodoServiceImpl @Inject()(
                          ): Future[Option[TodoResponse]] = {
     todoRepository.findByIdAndUserId(todoId, userId).flatMap {
       case Some(existingTodo) =>
+        val nowCompleted = !existingTodo.isCompleted
         val updatedTodo = existingTodo.copy(
-          isCompleted = !existingTodo.isCompleted,
+          isCompleted = nowCompleted,
           updatedAt = Some(LocalDateTime.now())
         )
 
-        todoRepository.update(updatedTodo).map { savedTodo =>
-          Some(toResponse(savedTodo))
+        todoRepository.update(updatedTodo).flatMap { savedTodo =>
+          if (nowCompleted) {
+            userRepository.findById(userId).foreach {
+              case Some(user) =>
+                emailActor ! SendTodoCompletedEmail(
+                  to = user.email,
+                  username = user.username,
+                  title = savedTodo.title
+                )
+              case None =>
+            }
+          }
+          Future.successful(Some(toResponse(savedTodo)))
         }
 
       case None =>

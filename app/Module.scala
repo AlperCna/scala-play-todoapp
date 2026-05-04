@@ -1,3 +1,4 @@
+import actors.EmailActorInitializer
 import com.google.inject.AbstractModule
 import repositories._
 import services._
@@ -12,5 +13,9 @@ class Module extends AbstractModule {
     bind(classOf[AuditLogRepository]).to(classOf[AuditLogRepositoryImpl])
     bind(classOf[AuditLogService]).to(classOf[AuditLogServiceImpl])
     bind(classOf[TenantRepository]).to(classOf[TenantRepositoryImpl])
+
+    // Actor'ları eager singleton olarak başlat
+    bind(classOf[EmailActorInitializer]).asEagerSingleton()
   }
 }
+

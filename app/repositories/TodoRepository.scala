@@ -46,4 +46,8 @@ trait TodoRepository {
                                  page: Int,
                                  pageSize: Int
                                ): Future[Seq[(Todo, String, String)]]
+
+  // Due date'i yarın olan, tamamlanmamış todoları kullanıcı bilgisiyle döner
+  // Dönen tuple: (Todo, userEmail, username)
+  def findDueTomorrow(): Future[Seq[(Todo, String, String)]]
 }
