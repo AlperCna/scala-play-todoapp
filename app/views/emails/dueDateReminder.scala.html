@@ -1,0 +1,21 @@
+@(username: String, title: String, dueDate: java.time.LocalDateTime)
+@emails.layout {
+  <div class="header">
+    <h1>&#9200; Son Tarih Yaklaşıyor!</h1>
+    <p>Görevinizin süresi yarın doluyor</p>
+  </div>
+  <div class="body">
+    <p>Merhaba <strong>@username</strong>,</p>
+    <p>Bir görevinizin son tarihi <strong>yarın</strong>!</p>
+    <div class="card">
+      <div class="label">Görev Adı</div>
+      <div class="value">@title</div>
+    </div>
+    <div class="card">
+      <div class="label">Son Tarih</div>
+      <div class="value">&#128197; @dueDate.format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm"))</div>
+    </div>
+    <p><span class="badge badge-purple">&#9200; Yarın son gün</span></p>
+    <p>Görevi zamanında tamamlamak için harekete geçin!</p>
+  </div>
+}

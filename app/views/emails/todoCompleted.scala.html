@@ -1,0 +1,17 @@
+@(username: String, title: String)
+@emails.layout {
+  <div class="header">
+    <h1>&#127942; Tebrikler!</h1>
+    <p>Görevi başarıyla tamamladınız</p>
+  </div>
+  <div class="body">
+    <p>Merhaba <strong>@username</strong>,</p>
+    <p>Harika iş! Bir görevi daha tamamladınız.</p>
+    <div class="card">
+      <div class="label">Tamamlanan Görev</div>
+      <div class="value">@title</div>
+    </div>
+    <p><span class="badge badge-green">&#10003; Tamamlandı</span></p>
+    <p>Bu başarıyı kutlayın ve bir sonraki göreve hazırlanın!</p>
+  </div>
+}

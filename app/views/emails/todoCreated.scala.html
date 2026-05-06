@@ -1,0 +1,22 @@
+@(username: String, title: String, dueDate: Option[java.time.LocalDateTime])
+@emails.layout {
+  <div class="header">
+    <h1>&#10003; Yeni Görev Oluşturuldu</h1>
+    <p>Göreviniz başarıyla kaydedildi</p>
+  </div>
+  <div class="body">
+    <p>Merhaba <strong>@username</strong>,</p>
+    <p>Yeni bir görev başarıyla oluşturuldu.</p>
+    <div class="card">
+      <div class="label">Görev Adı</div>
+      <div class="value">@title</div>
+    </div>
+    @dueDate.map { d =>
+      <div class="card">
+        <div class="label">Son Tarih</div>
+        <div class="value">&#128197; @d.format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm"))</div>
+      </div>
+    }
+    <p>Görevinizi tamamladığınızda sizi bilgilendireceğiz. Başarılar!</p>
+  </div>
+}

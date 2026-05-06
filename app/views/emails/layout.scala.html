@@ -1,0 +1,40 @@
+@(content: Html)
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px;
+                 box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              padding: 32px; text-align: center; }
+    .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 700; }
+    .header p  { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px; }
+    .body { padding: 32px; }
+    .body p { color: #374151; line-height: 1.6; font-size: 15px; margin: 0 0 16px; }
+    .card { background: #f8fafc; border-left: 4px solid #667eea; border-radius: 8px;
+            padding: 16px 20px; margin: 20px 0; }
+    .card .label { font-size: 12px; color: #6b7280; text-transform: uppercase;
+                   letter-spacing: 0.05em; margin-bottom: 4px; }
+    .card .value { font-size: 16px; font-weight: 600; color: #1f2937; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 999px;
+             font-size: 13px; font-weight: 600; }
+    .badge-green  { background: #d1fae5; color: #065f46; }
+    .badge-red    { background: #fee2e2; color: #991b1b; }
+    .badge-purple { background: #ede9fe; color: #5b21b6; }
+    .footer { background: #f8fafc; padding: 20px 32px; text-align: center;
+              border-top: 1px solid #e5e7eb; }
+    .footer p { color: #9ca3af; font-size: 13px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    @content
+    <div class="footer">
+      <p>Bu email <strong>Todo App</strong> tarafından otomatik olarak gönderilmiştir.</p>
+      <p>&copy; 2025 Todo App &mdash; Tüm hakları saklıdır.</p>
+    </div>
+  </div>
+</body>
+</html>

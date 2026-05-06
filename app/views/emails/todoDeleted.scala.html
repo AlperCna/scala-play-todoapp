@@ -1,0 +1,17 @@
+@(username: String, title: String)
+@emails.layout {
+  <div class="header">
+    <h1>&#128465; Görev Silindi</h1>
+    <p>Bir görev listenizden kaldırıldı</p>
+  </div>
+  <div class="body">
+    <p>Merhaba <strong>@username</strong>,</p>
+    <p>Aşağıdaki görev listenizden silindi.</p>
+    <div class="card">
+      <div class="label">Silinen Görev</div>
+      <div class="value">@title</div>
+    </div>
+    <p><span class="badge badge-red">&#10007; Silindi</span></p>
+    <p>Bu işlemi siz gerçekleştirmediyseniz lütfen hesabınızı kontrol edin.</p>
+  </div>
+}

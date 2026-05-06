@@ -1,4 +1,4 @@
-@(form: play.api.data.Form[forms.LoginForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(form: play.api.data.Form[forms.LoginForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile] = None)
 
 @main("Login") {
     <div class="row justify-content-center">

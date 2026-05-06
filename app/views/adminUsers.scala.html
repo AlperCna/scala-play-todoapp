@@ -1,4 +1,4 @@
-@(userPage: dtos.UserPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(userPage: dtos.UserPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile])
 
 @main("Admin Users") {
     <div class="row justify-content-center">

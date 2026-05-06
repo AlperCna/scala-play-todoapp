@@ -1,8 +1,8 @@
-@(title: String)(content: Html)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(title: String)(content: Html)(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile] = None)
 
-@isLoggedIn = @{ request.session.get("userId").isDefined }
-@username = @{ request.session.get("username").getOrElse("") }
-@role = @{ request.session.get("role").getOrElse("USER") }
+@isLoggedIn = @{ profileOpt.isDefined }
+@username = @{ profileOpt.map(_.getAppUsername).getOrElse("") }
+@role = @{ profileOpt.map(_.getAppRole).getOrElse("USER") }
 
 <!DOCTYPE html>
 <html lang="tr">

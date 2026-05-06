@@ -1,4 +1,4 @@
-@(todoPage: dtos.AdminTodoPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(todoPage: dtos.AdminTodoPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile])
 
 @main("Admin Todos") {
     <div class="row justify-content-center">

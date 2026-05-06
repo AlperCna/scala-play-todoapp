@@ -1,4 +1,4 @@
-@(stats: dtos.AdminDashboardResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(stats: dtos.AdminDashboardResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile])
 
 @main("Admin Dashboard") {
     <div class="row justify-content-center">

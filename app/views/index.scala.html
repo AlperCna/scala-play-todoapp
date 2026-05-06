@@ -1,4 +1,4 @@
-@()(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@()(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile] = None)
 @main("Welcome to Play") {
   <h1>Welcome to Play!</h1>
 }

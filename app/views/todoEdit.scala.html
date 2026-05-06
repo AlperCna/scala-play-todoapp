@@ -1,4 +1,4 @@
-@(id: String, form: play.api.data.Form[forms.TodoUpdateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(id: String, form: play.api.data.Form[forms.TodoUpdateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile])
 
 @main("Edit Todo") {
     <div class="row justify-content-center">

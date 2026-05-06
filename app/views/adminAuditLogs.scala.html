@@ -1,4 +1,4 @@
-@(page: dtos.AuditLogPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(page: dtos.AuditLogPageResponse)(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile])
 
 @main("Admin Audit Logs") {
     <div class="row justify-content-center">

@@ -1,4 +1,4 @@
-@(message: String)(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(message: String)(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile] = None)
 
 @main("Page Not Found") {
     <div class="row justify-content-center align-items-center" style="min-vh-75">

@@ -1,4 +1,4 @@
-@(todoPage: dtos.TodoPageResponse, createForm: play.api.data.Form[forms.TodoCreateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash)
+@(todoPage: dtos.TodoPageResponse, createForm: play.api.data.Form[forms.TodoCreateForm])(implicit request: play.api.mvc.RequestHeader, flash: Flash, profileOpt: Option[security.CustomProfile])
 
 @main("Todos") {
     <div class="row justify-content-center">
