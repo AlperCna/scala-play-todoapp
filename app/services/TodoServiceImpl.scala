@@ -2,6 +2,7 @@ package services
 
 import actors.EmailActor._
 import actors.EmailActorInitializer
+import events.TodoEventFactory
 import dtos.{TodoCreateRequest, TodoPageResponse, TodoResponse, TodoUpdateRequest}
 import models.Todo
 import repositories.{TodoRepository, UserRepository}
@@ -15,7 +16,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class TodoServiceImpl @Inject()(
                                  todoRepository: TodoRepository,
                                  userRepository: UserRepository,
-                                 emailActorInit: EmailActorInitializer
+                                 emailActorInit: EmailActorInitializer,
+                                 todoEventFactory: TodoEventFactory,
+                                 todoEventPublisher: TodoEventPublisher
                                )(implicit ec: ExecutionContext) extends TodoService {
 
   private val emailActor = emailActorInit.emailActor
@@ -83,7 +86,9 @@ class TodoServiceImpl @Inject()(
           )
         case None =>
       }
-      Future.successful(toResponse(savedTodo))
+      todoEventPublisher
+        .publish(todoEventFactory.todoCreated(savedTodo))
+        .map(_ => toResponse(savedTodo))
     }
   }
 
@@ -102,8 +107,10 @@ class TodoServiceImpl @Inject()(
           dueDate = request.dueDate
         )
 
-        todoRepository.update(updatedTodo).map { savedTodo =>
-          Some(toResponse(savedTodo))
+        todoRepository.update(updatedTodo).flatMap { savedTodo =>
+          todoEventPublisher
+            .publish(todoEventFactory.todoUpdated(savedTodo))
+            .map(_ => Some(toResponse(savedTodo)))
         }
 
       case None =>
@@ -129,7 +136,11 @@ class TodoServiceImpl @Inject()(
               case None =>
             }
           }
-          Future.successful(deleted)
+          if (deleted) {
+            todoEventPublisher.publish(todoEventFactory.todoDeleted(todo)).map(_ => deleted)
+          } else {
+            Future.successful(deleted)
+          }
         }
       case None =>
         Future.successful(false)
@@ -160,7 +171,11 @@ class TodoServiceImpl @Inject()(
               case None =>
             }
           }
-          Future.successful(Some(toResponse(savedTodo)))
+          val publishFuture =
+            if (nowCompleted) todoEventPublisher.publish(todoEventFactory.todoCompleted(savedTodo))
+            else Future.successful(())
+
+          publishFuture.map(_ => Some(toResponse(savedTodo)))
         }
 
       case None =>

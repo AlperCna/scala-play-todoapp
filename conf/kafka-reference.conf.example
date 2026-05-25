@@ -1,0 +1,7 @@
+# Kafka placeholders (Phase 1 reference)
+kafka {
+  enabled = false
+  bootstrapServers = "localhost:9092"
+  clientId = "todo-play-app"
+  topic.todoEvents = "todo.events.v1"
+}

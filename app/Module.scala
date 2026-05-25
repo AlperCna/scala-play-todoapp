@@ -10,6 +10,7 @@ class Module extends AbstractModule {
     bind(classOf[AuthService]).to(classOf[AuthServiceImpl])
     bind(classOf[TodoRepository]).to(classOf[TodoRepositoryImpl])
     bind(classOf[TodoService]).to(classOf[TodoServiceImpl])
+    bind(classOf[TodoEventPublisher]).to(classOf[NoOpTodoEventPublisher])
     bind(classOf[AdminService]).to(classOf[AdminServiceImpl])
     bind(classOf[AuditLogRepository]).to(classOf[AuditLogRepositoryImpl])
     bind(classOf[AuditLogService]).to(classOf[AuditLogServiceImpl])
@@ -20,4 +21,4 @@ class Module extends AbstractModule {
     install(new Pac4jModule())
   }
 }
-
+
