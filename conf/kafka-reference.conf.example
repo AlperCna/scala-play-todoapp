@@ -9,4 +9,8 @@ kafka {
   producer.requestTimeoutMs = 30000
   producer.deliveryTimeoutMs = 120000
   producer.maxInFlightRequestsPerConnection = 5
+  outbox.pollIntervalSeconds = 15
+  outbox.batchSize = 20
+  outbox.maxAttempts = 5
+  outbox.initialRetryDelaySeconds = 30
 }

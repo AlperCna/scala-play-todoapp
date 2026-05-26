@@ -1,6 +1,7 @@
 package actors
 
 import akka.actor.{ActorRef, ActorSystem}
+import kafka.outbox.{TodoOutboxPublishService, TodoOutboxWorkerSettingsLoader}
 import play.api.Configuration
 import repositories.TodoRepository
 
@@ -12,7 +13,9 @@ import scala.concurrent.ExecutionContext
 class EmailActorInitializer @Inject()(
   system:         ActorSystem,
   config:         Configuration,
-  todoRepository: TodoRepository
+  todoRepository: TodoRepository,
+  todoOutboxPublishService: TodoOutboxPublishService,
+  todoOutboxWorkerSettingsLoader: TodoOutboxWorkerSettingsLoader
 )(implicit ec: ExecutionContext) {
 
   // EmailActor'ı başlat — diğer servisler bu ref'i kullanır
@@ -25,5 +28,10 @@ class EmailActorInitializer @Inject()(
   system.actorOf(
     DueDateSchedulerActor.props(todoRepository, emailActor),
     name = "due-date-scheduler"
+  )
+
+  system.actorOf(
+    TodoOutboxPublisherActor.props(todoOutboxPublishService, todoOutboxWorkerSettingsLoader),
+    name = "todo-outbox-publisher"
   )
 }

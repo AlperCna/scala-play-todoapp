@@ -63,6 +63,85 @@ class TodoOutboxRepositoryImpl @Inject()(
     }
   }
 
+  override def findPublishable(limit: Int, availableBefore: LocalDateTime): Future[Seq[TodoOutboxEvent]] = Future {
+    db.withConnection { conn =>
+      val safeLimit = if (limit < 1) 10 else limit
+      val sql =
+        """
+          |SELECT id, aggregate_type, aggregate_id, event_type, event_version,
+          |       tenant_id, user_id, payload_json, headers_json, status,
+          |       attempt_count, available_at, published_at, last_error, created_at
+          |FROM todo_event_outbox
+          |WHERE status = ? AND available_at <= ?
+          |ORDER BY created_at ASC
+          |OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, TodoOutboxStatus.Pending)
+      stmt.setTimestamp(2, java.sql.Timestamp.valueOf(availableBefore))
+      stmt.setInt(3, safeLimit)
+
+      val rs = stmt.executeQuery()
+      val items = scala.collection.mutable.ListBuffer[TodoOutboxEvent]()
+
+      while (rs.next()) {
+        items += mapOutbox(rs)
+      }
+
+      items.toSeq
+    }
+  }
+
+  override def markPublished(id: UUID, publishedAt: LocalDateTime): Future[Boolean] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |UPDATE todo_event_outbox
+          |SET status = ?,
+          |    published_at = ?,
+          |    last_error = NULL
+          |WHERE id = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, TodoOutboxStatus.Published)
+      stmt.setTimestamp(2, java.sql.Timestamp.valueOf(publishedAt))
+      stmt.setString(3, id.toString)
+
+      stmt.executeUpdate() > 0
+    }
+  }
+
+  override def markFailure(
+    id: UUID,
+    nextAttemptCount: Int,
+    nextAvailableAt: LocalDateTime,
+    lastError: String,
+    nextStatus: String
+  ): Future[Boolean] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |UPDATE todo_event_outbox
+          |SET status = ?,
+          |    attempt_count = ?,
+          |    available_at = ?,
+          |    last_error = ?
+          |WHERE id = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, nextStatus)
+      stmt.setInt(2, nextAttemptCount)
+      stmt.setTimestamp(3, java.sql.Timestamp.valueOf(nextAvailableAt))
+      stmt.setString(4, lastError.take(1000))
+      stmt.setString(5, id.toString)
+
+      stmt.executeUpdate() > 0
+    }
+  }
+
   def insertOutbox(conn: java.sql.Connection, outboxEvent: TodoOutboxEvent): Unit = {
     val sql =
       """
