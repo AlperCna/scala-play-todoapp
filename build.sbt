@@ -15,6 +15,7 @@ libraryDependencies ++= Seq(
   jdbc,
   ws,
   evolutions,
+  "org.apache.kafka"        %  "kafka-clients"        % "3.7.1",
   "com.microsoft.sqlserver" %  "mssql-jdbc"          % "12.8.1.jre11",
   "org.apache.commons"      %  "commons-email"        % "1.5",
   "org.pac4j"               %% "play-pac4j"           % pac4jPlayVersion,

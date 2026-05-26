@@ -1,43 +1,85 @@
 # Kafka Phase 1
 
-## Faz Amaci
-Bu fazin amaci, Kafka entegrasyonuna dogrudan "producer bagla ve mesaj bas" diye girmek yerine uygulamanin event sinirlarini once netlestirmekti. Bu repo su anda bir Play Framework monolith'i ve todo ile ilgili asil business state degisiklikleri `TodoServiceImpl` icinde kesinlesiyor. Bu nedenle ilk adim olarak gercek Kafka baglantisi, outbox tablosu veya retry mekanizmasi degil; event modeli, publisher arayuzu ve service katmanindaki entegrasyon noktalari hazirlandi.
+## Bu Fazda Ne Yapmaya Calistik?
+Bu fazin amaci Kafka'yi hemen projeye baglamak degildi. Once sunu netlestirmek istedik:
 
-Bu faz sonunda sistem hala bugunku gibi calisiyor olmaliydi:
-- kullanici todo olusturabilmeli
-- todo guncelleyebilmeli
-- todo silebilmeli
-- todo tamamlayabilmeli
-- email actor akisi bozulmamali
+"Bu uygulamada hangi seyler event olmali?"
 
-Ayni anda sistemin bir sonraki fazda outbox ve gercek Kafka producer eklemeye hazir hale gelmesi hedeflendi.
+Kafka kullanacaksak once business olaylarini tanimlamamiz gerekir. Cunku Kafka kendi basina bir business mantigi degildir; sadece olaylari bir yerden baska bir yere tasiyan omurgadir. Ne tasiyacagini bilmeden Kafka baglamak, kablo cekip neye bagladigini bilmemek gibi olur.
 
-## Faz Kapsami
-Bu fazda bilerek yapilanlar:
-- todo event kontratlarini tanimlamak
-- tum eventlerin paylasacagi ortak envelope tipi eklemek
-- event uretimini tek merkezde toplamak
-- service katmanina publish-ready cagrilar eklemek
-- gercek Kafka yerine `NoOp` publisher ile akisi baglamak
-- ilk fazi anlatan teknik dokumani eklemek
+Bu yuzden Faz 1'de sunu yaptik:
+- Todo uygulamasinda hangi anlar "olay" sayilir, bunu belirledik
+- Bu olaylari temsil edecek siniflari ekledik
+- Olaylarin nasil ortak bir formatta tasinacagini belirledik
+- Uygulamanin ileride Kafka'ya event gonderecegi noktayi hazirladik
+- Ama henuz gercek Kafka'ya baglanmadik
 
-Bu fazda bilerek yapilmayanlar:
-- Kafka dependency eklemek
-- gercek Kafka broker'a baglanmak
-- outbox tablosu eklemek
-- transactional event persist yapmak
-- background publisher worker yazmak
-- retry, DLQ veya schema version migration davranisi eklemek
+Kisacasi:
+- Faz 1 = "event dusuncesini projeye yerlestirme"
+- Faz 1 degil = "Kafka broker'a veri gonderme"
 
-Bu ayrim onemli, cunku amac once dogru sinirlari kurmakti; altyapiyi ise sonraki faza birakiyoruz.
+## Faz 1'den Once Sistem Nasil Calisiyordu?
+Bu projede todo islemleri zaten calisiyordu:
+- kullanici todo olusturuyordu
+- guncelliyordu
+- siliyordu
+- tamamliyordu
 
-## Eklenen ve Degisen Yapilar
+Bu islemlerin asıl mantigi `TodoServiceImpl` icinde yuruyordu.
 
-### 1. Ortak event envelope
-Yeni dosya:
-- `app/kafka/events/DomainEventEnvelope.scala`
+Ayrica sistemde zaten bazi yan etkiler vardi:
+- todo olusturulunca email actor calisabiliyordu
+- todo tamamlaninca email gidebiliyordu
+- due date scheduler actor ile hatirlatma yapilabiliyordu
 
-Bu tip, tum todo eventleri icin ortak tasiyici kontrat gorevi goruyor. Sunlari standartlastiriyor:
+Yani sistem zaten "bir islem oldu, sonra bir sey daha tetiklendi" mantigina yabanci degildi. Bu bizim icin iyi bir baslangicti.
+
+Ama eksik olan sey sunuydu:
+- "todo olusturuldu" gibi bir olayi resmi bir domain event olarak tanimlamiyorduk
+- bu olayi standart bir veri yapisina koymuyorduk
+- uygulamanin "burada event disari cikar" diye bir siniri yoktu
+
+## Teoride Neyi Cozuyoruz?
+Kafka'ya geciste en onemli zihniyet degisimi sudur:
+
+Eskiden:
+- kullanici islem yapar
+- uygulama dogrudan sonucu uretir
+- yan etkiler uygulamanin icinde daginik sekilde olur
+
+Event-driven dusunce ile:
+- kullanici islem yapar
+- uygulama business sonucu uretir
+- uygulama "bu olay oldu" diye bir event uretir
+- diger sistemler bu event'i kullanir
+
+Burada "event" su demektir:
+- sistemde gercekten onemli bir sey oldu
+- bu olayi baskalari bilmek isteyebilir
+- bu olayin bir anlami vardir
+
+Bizim projede bunun ilk ornekleri:
+- `TodoCreated`
+- `TodoUpdated`
+- `TodoDeleted`
+- `TodoCompleted`
+
+## Bu Projede Tam Olarak Ne Yaptik?
+
+### 1. Domain eventleri tanimladik
+Yeni Kafka event tipleri ekledik:
+- `TodoCreated`
+- `TodoUpdated`
+- `TodoDeleted`
+- `TodoCompleted`
+
+Bunlar su soruya cevap veriyor:
+"Bu uygulamada hangi business olaylarini disari duyurmak istiyoruz?"
+
+Bu cok onemli cunku ileride Kafka consumer yazarken artik kafamizda degil, kodda tanimli eventler olacak.
+
+### 2. Ortak event zarfi olusturduk
+Tum eventler icin ortak bir envelope tanimladik:
 - `eventId`
 - `eventType`
 - `eventVersion`
@@ -49,228 +91,178 @@ Bu tip, tum todo eventleri icin ortak tasiyici kontrat gorevi goruyor. Sunlari s
 - `correlationId`
 - `payload`
 
-Bu envelope sayesinde sonraki fazlarda eventleri ister outbox'a yazalim, ister Kafka'ya basalım, ayni ust seviye kontrati koruyabilecegiz.
+Bunu sunun icin yaptik:
+- yarin `TodoCreated` da gelse
+- obur gun `TodoCompleted` da gelse
+- hepsinin ortak bir ust yapisi olsun
 
-### 2. Todo event tipleri
-Yeni dosya:
-- `app/kafka/events/TodoDomainEvent.scala`
+Bu, ileride Kafka'ya basarken de, outbox'a yazarken de, consumer okurken de cok isimize yarayacak.
 
-Eklenen event tipleri:
-- `TodoCreated`
-- `TodoCompleted`
-- `TodoUpdated`
-- `TodoDeleted`
+### 3. Event factory ekledik
+Event'i service'in icinde elle elle kurmak yerine `TodoEventFactory` ekledik.
 
-Bu tipler su anda hafif agirlikli case class olarak tutuluyor. Bu fazda asil degerleri, uygulamanin hangi business anlarini event saydigini acik hale getirmeleri.
+Neden?
+Cunku service'in isi business akisi olmali. Event'in JSON benzeri yapisini, metadata'sini, versiyon bilgisini her seferinde service'in icinde kurarsak servisler karmasiklasir.
 
-### 3. Event factory
-Yeni dosya:
-- `app/kafka/events/TodoEventFactory.scala`
+Yani:
+- service = "hangi olay oldu?"
+- factory = "bu olayi standart event nesnesine cevir"
 
-Bu sinifin gorevi:
-- todo modelinden envelope uretmek
-- ortak event metadata'sini tek yerde kurmak
-- payload alanlarini standartlastirmak
+Bu ayirim ileride cok isimize yarayacak.
 
-Factory kullanmamizin nedeni event olusturma kurallarini service metodlarina yaymamak. Eger bunu service icine dagitsaydik, Faz 2 ve Faz 3'te degisiklik yapmak daha zor olurdu.
+### 4. Publisher sinirini hazirladik
+`TodoEventPublisher` diye bir arayuz ekledik.
 
-### 4. Publisher arayuzu
-Yeni dosyalar:
-- `app/kafka/publisher/TodoEventPublisher.scala`
-- `app/kafka/publisher/NoOpTodoEventPublisher.scala`
+Bu arayuzun anlami su:
+"Buradan sonra event uygulama disina cikabilir."
 
-`TodoEventPublisher`, sistemin "buradan sonra event disariya cikar" sinirini temsil ediyor.
+Ama Faz 1'de gercek Kafka'ya gitmek istemedigimiz icin `NoOpTodoEventPublisher` kullandik.
 
-Bu tipleri genel `services` klasoru altinda tutmak yerine ayri bir `app/kafka` modulu altina tasidik. Bunun nedeni, Kafka ile ilgili kontrat ve altyapi iskeletinin uygulamanin genel servisleriyle karismamasini saglamak.
+`NoOp` ne demek?
+- event'i aliyor
+- ama hicbir yere gondermiyor
+- sadece akisi bozmadan donuyor
 
-Faz 1'de bunu gercek Kafka ile degil, `NoOpTodoEventPublisher` ile bagladik. Bunun nedeni:
-- service akisini bugunden publish-ready yapmak
-- ama Kafka olmayan local ortamda davranisi bozmamak
-- sonraki fazda sadece implementasyonu degistirerek ilerleyebilmek
+Bu cok faydali cunku:
+- kodu simdiden event gonderecek sekilde duzenliyoruz
+- ama Kafka olmadan da uygulama calisiyor
 
-### 5. Service entegrasyonu
-Degisen dosya:
-- `app/services/TodoServiceImpl.scala`
+### 5. Kafka kodlarini ayri klasore tasidik
+Kafka ile ilgili siniflari genel `services` altina yigmadik.
+Onlari ayri bir module aldik:
+- `app/kafka/events`
+- `app/kafka/publisher`
 
-Bu dosyada:
+Bu neden onemli?
+Cunku proje buyudukce sunlar da gelecek:
+- outbox
+- producer
+- worker
+- consumer kontratlari
+- serialization
+
+Hepsinin tek bir `kafka` agaci altinda toplanmasi projeyi daha anlasilir yapar.
+
+### 6. `TodoServiceImpl` icinde event noktalarini belirledik
+Burada kritik karar su oldu:
 - `createTodo` sonrasi `TodoCreated`
 - `updateTodo` sonrasi `TodoUpdated`
 - `deleteTodo` sonrasi `TodoDeleted`
-- `toggleTodo` icinde sadece `false -> true` gecisinde `TodoCompleted`
+- `toggleTodo` icinde `false -> true` ise `TodoCompleted`
 
-publish-ready cagrilari eklendi.
-
-Buradaki onemli nokta su:
-- Kafka ile ilgili tipler artik `TodoServiceImpl` icinde sadece import edilen bagimliliklar
-- ama fiziksel olarak `services` klasorunun icine dagilmiyorlar
-- boylece ileride `outbox`, `publisher`, `consumer-contract`, `serialization` gibi yapilar ayni `app/kafka` agaci altinda buyuyebilecek
-
-Onemli karar:
+Buradaki en onemli tasarim karari:
 - `updateTodo` icinde ayrica `TodoCompleted` uretmiyoruz
-- completion semantigi yalnizca `toggleTodo` akisinda temsil ediliyor
 
-Bu sayede completion olayi tek bir business akisina bagli kaliyor ve ileride consumer davranislarini sade tutuyor.
+Neden?
+Cunku completion olayi tek ve net bir business akista temsil edilsin istedik. Yani "tamamlandi" demek, bu projede `toggleTodo` tarafinda anlam kazaniyor.
 
-### 6. DI wiring
-Degisen dosya:
-- `app/Module.scala`
+Bu tip kararlar ilerde consumer davranisini sade tutar.
 
-Burada `TodoEventPublisher` icin default bind olarak `NoOpTodoEventPublisher` secildi. Bu karar Faz 1 icin kritik cunku:
-- app hemen acilip calisabilmeli
-- Kafka altyapisi olmadan integration noktasi denenebilmeli
-- fazlar ilerledikce bind degistirerek gercek publisher'a gecebilmeliyiz
+## Faz 1'den Sonra Sistem Nasil Degisti?
+Kullanici acisindan neredeyse hicbir sey degismedi.
 
-### 7. Config placeholder'lari
-Yeni dosya:
-- `conf/kafka-reference.conf.example`
+Uygulama hala:
+- todo olusturuyor
+- guncelliyor
+- siliyor
+- tamamliyor
+- email actor akisini calistiriyor
 
-Eklenen alanlar:
-- `kafka.enabled = false`
-- `kafka.bootstrapServers`
-- `kafka.clientId`
-- `kafka.topic.todoEvents`
+Ama mimari acisindan buyuk bir fark oldu:
+- sistem artik event dusuncesini taniyor
+- eventleri standart yapida uretebiliyor
+- event cikis sinirini biliyor
 
-Bu alanlar su anda sadece config surface olusturuyor. Faz 1'de aktif davranis degistirmiyorlar. Bunun amaci, sonraki fazlarda konfigurasyon eklerken yeni isim tartismasi yapmamak.
+Yani kullanici ayni uygulamayi goruyor, ama icerideki yapi Kafka'ya uygun hale gelmeye basliyor.
 
-Bu placeholder'lari dogrudan `conf/application.conf` icine yazmak yerine ayri bir referans dosyasinda tuttuk. Boylece repoda mevcut olabilecek secret'lari yeniden commit etmeden Phase 1 konfigurasyon yuzeyini belgelemis olduk.
+## Bu Fazda Neyi Bilerek Yapmadik?
+Bu kisim da cok onemli. Faz raporlarini okurken sadece "ne yaptik" degil "neyi bilerek yapmadik" da bilinmeli.
 
-## Neden Bu Tasarim Secildi
+Faz 1'de sunlari bilerek yapmadik:
+- gercek Kafka producer baglamadik
+- Kafka dependency eklemedik
+- outbox yazmadik
+- DB transaction tarafina girmedik
+- retry, DLQ, worker eklemedik
 
-### Event publish noktasi neden service katmani?
-Bu projede controller katmani HTTP/form/request sorumlulugu tasiyor. Repository katmani ise veriyi DB'ye yazma/okuma ile ilgileniyor. Kafka event uretimi ikisinin de tam ortasinda, business state degisiminin kesinlestigi yerde olmali. Bu yer `TodoServiceImpl`.
+Yani Faz 1'de hedef:
+"Kafka kullanacak dili olusturmak"
 
-Bu tercih su faydalari sagliyor:
-- controller Kafka bilmez
-- repository Kafka bilmez
-- business olayin anlami service katmaninda toplanir
-- Faz 2'de outbox eklenirken yine ayni sinir korunur
+Ama hedef degil:
+"Kafka'ya veri gondermek"
 
-### Actor yapisi neden korunuyor?
-Projede zaten actor tabanli async side effect deseni var:
-- `EmailActor`
-- `DueDateSchedulerActor`
-- `EmailActorInitializer`
+## Testte Neyi Kanitladik?
+Bu fazda iki sey kanitlanmaliydi:
 
-Bu nedenle Kafka iskeletini actor yapisini sokmeden eklemek daha guvenli. Faz 1'de actorlari kaldirmak veya Kafka'ya donusturmek yerine, onlari oldugu gibi biraktik. Boylece:
-- mevcut mail davranisi bozulmuyor
-- yeni event modeli sessizce yanina yerlesiyor
-- sistem asamali migrasyona uygun kaliyor
+### 1. Event factory gercekten dogru event uretmeli
+Eklenen test:
+- `TodoEventFactorySpec`
 
-### Neden gercek Kafka bu fazda eklenmedi?
-Cunku Faz 1'in ana sorusu "mesaji nasil basariz?" degil, "hangi business olayi event olarak kabul ediyoruz?" sorusuydu. Bu soru netlesmeden producer, outbox veya consumer yazmak tasarimi tekrar tekrar degistirmeye neden olurdu.
+Bu test su sorulara cevap veriyor:
+- event tipi dogru mu
+- ortak kontrat alanlari doluyor mu
+- payload icinde gerekli veri var mi
+- `TodoCompleted` tamamlanmis state'i dogru tasiyor mu
 
-## Event Semantigi
-Bu fazda sabitlenen event anlami su sekilde:
+Yani event yapisinin kagit ustunde degil, kodda gercekten dogru calistigini gosterdik.
 
-### `TodoCreated`
-Ne zaman uretilir:
-- yeni todo basariyla persist edildikten sonra
+### 2. Publisher siniri uygulamayi bozmamali
+Eklenen test:
+- `NoOpTodoEventPublisherSpec`
 
-Neyi temsil eder:
-- kullanici icin yeni bir todo artik sistem gercegidir
+Bu test su soruya cevap veriyor:
+- sistem event publish etmeye hazir hale gelirken, Kafka yokken uygulama bozuluyor mu?
 
-### `TodoUpdated`
-Ne zaman uretilir:
-- mevcut todo basariyla guncellendikten sonra
+Cevap:
+- hayir, bozulmuyor
 
-Neyi temsil eder:
-- title, description, due date veya genel todo state'i degismistir
+Bu da bize su guveni veriyor:
+- Faz 1'de yaptigimiz refactor kullanici akislarini kirmadan calisiyor
 
-Not:
-- bu fazda `updateTodo` icinde completion semantigi ayri event'e ayrilmadi
+### 3. Genel sistem de kirilmamali
+Mevcut `HomeControllerSpec` de gecti.
 
-### `TodoDeleted`
-Ne zaman uretilir:
-- soft delete islemi basariyla tamamlandiginda
+Bu da bize sunu soyluyor:
+- yeni Kafka iskeleti projeyi genel anlamda bozmadı
 
-Neyi temsil eder:
-- todo artik aktif listeye dahil degildir
-
-### `TodoCompleted`
-Ne zaman uretilir:
-- `toggleTodo` icinde `false -> true` gecisinde
-
-Neyi temsil eder:
-- kullanici todo'yu tamamlanmis duruma gecirmistir
-
-Ozel kural:
-- `true -> false` gecisinde event uretilmiyor
-- `updateTodo` completion event'i uretmiyor
-
-Bu karar Faz 1'de bilincli olarak alindi, cunku completion event'ini tek ve net bir business yoluna baglamak istedik.
-
-## Faz Sonunda Sistem Davranisi
-Bu fazdan sonra kullanici davranisinda bir fark olmamali. Uygulama hala:
-- email actor ile bildirim gonderebilmeli
-- todo CRUD akislarini calistirabilmeli
-- mevcut controller ve repository yapisini korumali
-
-Eklenen event publish cagrilari `NoOp` oldugu icin:
-- Kafka yoksa hata olusmaz
-- mevcut akis bozulmaz
-- sonraki fazlar icin entegrasyon noktasi hazir olur
-
-## Testler ve Dogrulama
-Bu faz icin sadece kod eklemek yeterli degildi; faz sonunda degisikligin gercekten ayakta oldugunu dogrulamak gerekiyordu.
-
-### Eklenen testler
-
-#### `test/events/TodoEventFactorySpec.scala`
-Bu testler sunlari kontrol ediyor:
-- `TodoCreated` envelope olusuyor mu
-- ortak kontrat alanlari dogru doluyor mu
-- `tenantId`, `userId`, `entityId`, `eventVersion` beklenen sekilde mi
-- payload icindeki `todoId`, `title`, `isCompleted` gibi alanlar dogru mu
-- `TodoCompleted` event'i tamamlanmis state'i dogru tasiyor mu
-
-Bu testler Faz 1'in en onemli soyutlamasi olan event factory'nin davranisini sabitliyor.
-
-#### `test/services/NoOpTodoEventPublisherSpec.scala`
-Bu test su davranisi dogruluyor:
-- publisher cagrisi basariyla donuyor mu
-- `NoOp` implementasyon cagirani kirmadan akisi surdurebiliyor mu
-
-Bu testin degeri su: Faz 1'de gercek Kafka yokken bile service publish noktalarinin akisi bozmamasi gerekiyor.
-
-### Calistirilan dogrulama komutu
-Faz 1 sonunda su komut calistirildi:
+## Faz 1 Sonunda Calistirdigimiz Komut
+Asagidaki komut calistirildi:
 
 ```powershell
 sbt test
 ```
 
-### Test sonucu
-Sonuc:
-- tum testler gecti
-- toplam 6 test basarili
-- yeni event testleri ve mevcut `HomeControllerSpec` birlikte basarili calisti
+Test sonucu:
+- toplam 6 test gecti
+- hata yok
 
-Bu bize sunu gosteriyor:
-- yeni event iskeleti derleniyor
-- DI wiring uygulamayi kirmiyor
-- mevcut uygulama test yuzeyi bozulmadi
-- Faz 1 push edilmeye hazir durumda
+Bu, Faz 1'in "kod yazildi" degil, "kod calisiyor" seviyesinde dogrulandigi anlamina gelir.
 
-## Bilinen Sinirlamalar
-Bu faz bilincli olarak yarim bir Kafka entegrasyonu birakiyor. Henuz sunlar yok:
-- gercek Kafka producer
-- outbox tablosu
-- transactional event persist
-- retry/backoff
-- failure kayitlari
-- DLQ
-- request kaynakli correlation id propagation
+## Faz 1 Bize Ne Kazandirdi?
+Bu fazdan sonra proje:
+- event ureten bir yapıya dogru adim atti
+- Kafka'ya baglanmadan once hangi olaylari tasiyacagini netlestirdi
+- uygulamanin icine Kafka sinirlarini dogru yerlestirmeye basladi
 
-Bunlar eksik degil; sonraki fazlara bilincli olarak birakildi.
+Kisacasi Faz 1 bize teknoloji degil, dil kazandirdi.
+Yani sistem artik "event" diliyle dusunmeye basladi.
 
-## Sonraki Faz Icin Hazirliklar
-Faz 2'de bir sonraki adim, eventleri dogrudan publisher'a vermek yerine outbox tablosuna yazmak olacak. Faz 1'de eklenen yapilar bu gecisi kolaylastiriyor:
-- event contract artik sabit
-- service publish siniri belli
-- publisher abstraction hazir
-- config surface olusmus durumda
+## Hala Ne Eksikti?
+Faz 1 bitince hala su eksikler vardi:
+- event kaybolmadan saklanmiyordu
+- gercek Kafka'ya gitmiyordu
+- retry yoktu
+- persistence garantisi yoktu
 
-Boylece Faz 2'de asil odak su olacak:
-- todo degisikligi ve event kaydini ayni transaction icine almak
-- event kaybini onlemek
-- sonraki fazdaki gercek Kafka publish icin saglam zemin kurmak
+Bu nedenle Faz 2 gerekliydi.
+
+## Faz 2 Neden Gerekiyordu?
+Faz 1'de event olusturabiliyorduk ama guvenli sekilde saklamiyorduk.
+
+Bu da su riski dogurur:
+- todo DB'ye yazilir
+- event sonra gonderilemez
+- business veri vardir ama event yoktur
+
+Iste Faz 2'nin problemi buydu.
+Faz 2'de event'i kaybetmemeyi ogrenecegiz.

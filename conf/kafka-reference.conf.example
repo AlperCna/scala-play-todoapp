@@ -4,4 +4,9 @@ kafka {
   bootstrapServers = "localhost:9092"
   clientId = "todo-play-app"
   topic.todoEvents = "todo.events.v1"
+  producer.acks = "all"
+  producer.enableIdempotence = true
+  producer.requestTimeoutMs = 30000
+  producer.deliveryTimeoutMs = 120000
+  producer.maxInFlightRequestsPerConnection = 5
 }

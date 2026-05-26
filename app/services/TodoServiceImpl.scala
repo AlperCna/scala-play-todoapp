@@ -4,7 +4,7 @@ import actors.EmailActor._
 import actors.EmailActorInitializer
 import dtos.{TodoCreateRequest, TodoPageResponse, TodoResponse, TodoUpdateRequest}
 import kafka.events.TodoEventFactory
-import kafka.publisher.TodoEventPublisher
+import kafka.outbox.{TodoOutboxCommandRepository, TodoOutboxEventFactory}
 import models.Todo
 import repositories.{TodoRepository, UserRepository}
 
@@ -19,7 +19,8 @@ class TodoServiceImpl @Inject()(
                                  userRepository: UserRepository,
                                  emailActorInit: EmailActorInitializer,
                                  todoEventFactory: TodoEventFactory,
-                                 todoEventPublisher: TodoEventPublisher
+                                 todoOutboxEventFactory: TodoOutboxEventFactory,
+                                 todoOutboxCommandRepository: TodoOutboxCommandRepository
                                )(implicit ec: ExecutionContext) extends TodoService {
 
   private val emailActor = emailActorInit.emailActor
@@ -76,7 +77,9 @@ class TodoServiceImpl @Inject()(
       dueDate = request.dueDate
     )
 
-    todoRepository.create(todo).flatMap { savedTodo =>
+    val outboxEvent = todoOutboxEventFactory.fromEnvelope(todoEventFactory.todoCreated(todo))
+
+    todoOutboxCommandRepository.createTodoWithOutbox(todo, outboxEvent).flatMap { savedTodo =>
       userRepository.findById(userId).foreach {
         case Some(user) =>
           emailActor ! SendTodoCreatedEmail(
@@ -87,9 +90,7 @@ class TodoServiceImpl @Inject()(
           )
         case None =>
       }
-      todoEventPublisher
-        .publish(todoEventFactory.todoCreated(savedTodo))
-        .map(_ => toResponse(savedTodo))
+      Future.successful(toResponse(savedTodo))
     }
   }
 
@@ -107,11 +108,10 @@ class TodoServiceImpl @Inject()(
           updatedAt = Some(LocalDateTime.now()),
           dueDate = request.dueDate
         )
+        val outboxEvent = todoOutboxEventFactory.fromEnvelope(todoEventFactory.todoUpdated(updatedTodo))
 
-        todoRepository.update(updatedTodo).flatMap { savedTodo =>
-          todoEventPublisher
-            .publish(todoEventFactory.todoUpdated(savedTodo))
-            .map(_ => Some(toResponse(savedTodo)))
+        todoOutboxCommandRepository.updateTodoWithOutbox(updatedTodo, Some(outboxEvent)).map { savedTodo =>
+          Some(toResponse(savedTodo))
         }
 
       case None =>
@@ -125,7 +125,14 @@ class TodoServiceImpl @Inject()(
                          ): Future[Boolean] = {
     todoRepository.findByIdAndUserId(todoId, userId).flatMap {
       case Some(todo) =>
-        todoRepository.delete(todoId, userId).flatMap { deleted =>
+        val deletedAt = LocalDateTime.now()
+        val deletedTodo = todo.copy(
+          deletedAt = Some(deletedAt),
+          isDeleted = true
+        )
+        val outboxEvent = todoOutboxEventFactory.fromEnvelope(todoEventFactory.todoDeleted(deletedTodo))
+
+        todoOutboxCommandRepository.deleteTodoWithOutbox(todoId, userId, deletedAt, outboxEvent).flatMap { deleted =>
           if (deleted) {
             userRepository.findById(userId).foreach {
               case Some(user) =>
@@ -137,11 +144,7 @@ class TodoServiceImpl @Inject()(
               case None =>
             }
           }
-          if (deleted) {
-            todoEventPublisher.publish(todoEventFactory.todoDeleted(todo)).map(_ => deleted)
-          } else {
-            Future.successful(deleted)
-          }
+          Future.successful(deleted)
         }
       case None =>
         Future.successful(false)
@@ -159,8 +162,13 @@ class TodoServiceImpl @Inject()(
           isCompleted = nowCompleted,
           updatedAt = Some(LocalDateTime.now())
         )
+        val outboxEvent =
+          if (nowCompleted)
+            Some(todoOutboxEventFactory.fromEnvelope(todoEventFactory.todoCompleted(updatedTodo)))
+          else
+            None
 
-        todoRepository.update(updatedTodo).flatMap { savedTodo =>
+        todoOutboxCommandRepository.updateTodoWithOutbox(updatedTodo, outboxEvent).flatMap { savedTodo =>
           if (nowCompleted) {
             userRepository.findById(userId).foreach {
               case Some(user) =>
@@ -172,11 +180,7 @@ class TodoServiceImpl @Inject()(
               case None =>
             }
           }
-          val publishFuture =
-            if (nowCompleted) todoEventPublisher.publish(todoEventFactory.todoCompleted(savedTodo))
-            else Future.successful(())
-
-          publishFuture.map(_ => Some(toResponse(savedTodo)))
+          Future.successful(Some(toResponse(savedTodo)))
         }
 
       case None =>
