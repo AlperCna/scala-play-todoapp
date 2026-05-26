@@ -35,7 +35,7 @@ Bu ayrim onemli, cunku amac once dogru sinirlari kurmakti; altyapiyi ise sonraki
 
 ### 1. Ortak event envelope
 Yeni dosya:
-- `app/events/DomainEventEnvelope.scala`
+- `app/kafka/events/DomainEventEnvelope.scala`
 
 Bu tip, tum todo eventleri icin ortak tasiyici kontrat gorevi goruyor. Sunlari standartlastiriyor:
 - `eventId`
@@ -53,7 +53,7 @@ Bu envelope sayesinde sonraki fazlarda eventleri ister outbox'a yazalim, ister K
 
 ### 2. Todo event tipleri
 Yeni dosya:
-- `app/events/TodoDomainEvent.scala`
+- `app/kafka/events/TodoDomainEvent.scala`
 
 Eklenen event tipleri:
 - `TodoCreated`
@@ -65,7 +65,7 @@ Bu tipler su anda hafif agirlikli case class olarak tutuluyor. Bu fazda asil deg
 
 ### 3. Event factory
 Yeni dosya:
-- `app/events/TodoEventFactory.scala`
+- `app/kafka/events/TodoEventFactory.scala`
 
 Bu sinifin gorevi:
 - todo modelinden envelope uretmek
@@ -76,10 +76,12 @@ Factory kullanmamizin nedeni event olusturma kurallarini service metodlarina yay
 
 ### 4. Publisher arayuzu
 Yeni dosyalar:
-- `app/services/TodoEventPublisher.scala`
-- `app/services/NoOpTodoEventPublisher.scala`
+- `app/kafka/publisher/TodoEventPublisher.scala`
+- `app/kafka/publisher/NoOpTodoEventPublisher.scala`
 
 `TodoEventPublisher`, sistemin "buradan sonra event disariya cikar" sinirini temsil ediyor.
+
+Bu tipleri genel `services` klasoru altinda tutmak yerine ayri bir `app/kafka` modulu altina tasidik. Bunun nedeni, Kafka ile ilgili kontrat ve altyapi iskeletinin uygulamanin genel servisleriyle karismamasini saglamak.
 
 Faz 1'de bunu gercek Kafka ile degil, `NoOpTodoEventPublisher` ile bagladik. Bunun nedeni:
 - service akisini bugunden publish-ready yapmak
@@ -97,6 +99,11 @@ Bu dosyada:
 - `toggleTodo` icinde sadece `false -> true` gecisinde `TodoCompleted`
 
 publish-ready cagrilari eklendi.
+
+Buradaki onemli nokta su:
+- Kafka ile ilgili tipler artik `TodoServiceImpl` icinde sadece import edilen bagimliliklar
+- ama fiziksel olarak `services` klasorunun icine dagilmiyorlar
+- boylece ileride `outbox`, `publisher`, `consumer-contract`, `serialization` gibi yapilar ayni `app/kafka` agaci altinda buyuyebilecek
 
 Onemli karar:
 - `updateTodo` icinde ayrica `TodoCompleted` uretmiyoruz

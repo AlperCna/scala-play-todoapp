@@ -1,4 +1,4 @@
-package events
+package kafka.events
 
 import play.api.libs.json.JsObject
 

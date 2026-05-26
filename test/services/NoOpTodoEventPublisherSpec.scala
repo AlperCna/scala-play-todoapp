@@ -1,6 +1,6 @@
-package services
+package kafka.publisher
 
-import events.DomainEventEnvelope
+import kafka.events.DomainEventEnvelope
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json

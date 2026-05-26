@@ -2,8 +2,9 @@ package services
 
 import actors.EmailActor._
 import actors.EmailActorInitializer
-import events.TodoEventFactory
 import dtos.{TodoCreateRequest, TodoPageResponse, TodoResponse, TodoUpdateRequest}
+import kafka.events.TodoEventFactory
+import kafka.publisher.TodoEventPublisher
 import models.Todo
 import repositories.{TodoRepository, UserRepository}
 

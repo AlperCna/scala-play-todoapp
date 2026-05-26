@@ -1,6 +1,6 @@
-package services
+package kafka.publisher
 
-import events.DomainEventEnvelope
+import kafka.events.DomainEventEnvelope
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future

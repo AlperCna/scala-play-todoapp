@@ -1,5 +1,6 @@
 import actors.EmailActorInitializer
 import com.google.inject.AbstractModule
+import kafka.publisher.{NoOpTodoEventPublisher, TodoEventPublisher}
 import repositories._
 import security.Pac4jModule
 import services._
