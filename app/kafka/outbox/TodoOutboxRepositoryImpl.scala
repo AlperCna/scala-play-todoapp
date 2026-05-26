@@ -65,6 +65,24 @@ class TodoOutboxRepositoryImpl @Inject()(
     }
   }
 
+  override def countByStatusAndTenant(status: String, tenantId: UUID): Future[Int] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |SELECT COUNT(*) AS total
+          |FROM todo_event_outbox
+          |WHERE status = ? AND tenant_id = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, status)
+      stmt.setString(2, tenantId.toString)
+      val rs = stmt.executeQuery()
+
+      if (rs.next()) rs.getInt("total") else 0
+    }
+  }
+
   override def findPublishable(limit: Int, availableBefore: LocalDateTime): Future[Seq[TodoOutboxEvent]] = Future {
     db.withConnection { conn =>
       val safeLimit = if (limit < 1) 10 else limit
@@ -92,6 +110,79 @@ class TodoOutboxRepositoryImpl @Inject()(
       }
 
       items.toSeq
+    }
+  }
+
+  override def findFailedByTenantPaged(tenantId: UUID, page: Int, pageSize: Int): Future[Seq[TodoOutboxEvent]] = Future {
+    db.withConnection { conn =>
+      val safePage = if (page < 1) 1 else page
+      val safePageSize = if (pageSize < 1) 10 else pageSize
+      val offset = (safePage - 1) * safePageSize
+
+      val sql =
+        """
+          |SELECT id, aggregate_type, aggregate_id, event_type, event_version,
+          |       tenant_id, user_id, payload_json, headers_json, status,
+          |       attempt_count, available_at, published_at, last_error, created_at
+          |FROM todo_event_outbox
+          |WHERE status = ? AND tenant_id = ?
+          |ORDER BY created_at DESC
+          |OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, TodoOutboxStatus.Failed)
+      stmt.setString(2, tenantId.toString)
+      stmt.setInt(3, offset)
+      stmt.setInt(4, safePageSize)
+
+      val rs = stmt.executeQuery()
+      val items = scala.collection.mutable.ListBuffer[TodoOutboxEvent]()
+
+      while (rs.next()) {
+        items += mapOutbox(rs)
+      }
+
+      items.toSeq
+    }
+  }
+
+  override def findById(id: UUID): Future[Option[TodoOutboxEvent]] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |SELECT id, aggregate_type, aggregate_id, event_type, event_version,
+          |       tenant_id, user_id, payload_json, headers_json, status,
+          |       attempt_count, available_at, published_at, last_error, created_at
+          |FROM todo_event_outbox
+          |WHERE id = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, id.toString)
+      val rs = stmt.executeQuery()
+
+      if (rs.next()) Some(mapOutbox(rs)) else None
+    }
+  }
+
+  override def findByIdAndTenant(id: UUID, tenantId: UUID): Future[Option[TodoOutboxEvent]] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |SELECT id, aggregate_type, aggregate_id, event_type, event_version,
+          |       tenant_id, user_id, payload_json, headers_json, status,
+          |       attempt_count, available_at, published_at, last_error, created_at
+          |FROM todo_event_outbox
+          |WHERE id = ? AND tenant_id = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, id.toString)
+      stmt.setString(2, tenantId.toString)
+      val rs = stmt.executeQuery()
+
+      if (rs.next()) Some(mapOutbox(rs)) else None
     }
   }
 
@@ -139,6 +230,29 @@ class TodoOutboxRepositoryImpl @Inject()(
       stmt.setTimestamp(3, java.sql.Timestamp.valueOf(nextAvailableAt))
       stmt.setString(4, lastError.take(1000))
       stmt.setString(5, id.toString)
+
+      stmt.executeUpdate() > 0
+    }
+  }
+
+  override def resetForReplay(id: UUID, nextAvailableAt: LocalDateTime): Future[Boolean] = Future {
+    db.withConnection { conn =>
+      val sql =
+        """
+          |UPDATE todo_event_outbox
+          |SET status = ?,
+          |    available_at = ?,
+          |    published_at = NULL,
+          |    last_error = NULL,
+          |    attempt_count = 0
+          |WHERE id = ? AND status = ?
+          |""".stripMargin
+
+      val stmt = conn.prepareStatement(sql)
+      stmt.setString(1, TodoOutboxStatus.Pending)
+      stmt.setTimestamp(2, java.sql.Timestamp.valueOf(nextAvailableAt))
+      stmt.setString(3, id.toString)
+      stmt.setString(4, TodoOutboxStatus.Failed)
 
       stmt.executeUpdate() > 0
     }

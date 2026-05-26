@@ -1,9 +1,11 @@
 package controllers
 
+import kafka.outbox.TodoOutboxReplayResult
 import security.{CustomProfile, SecureAction}
 import services.AdminService
 
 import javax.inject._
+import play.api.libs.json.Json
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -53,6 +55,80 @@ class AdminController @Inject()(
 
     adminService.getAuditLogsPaged(profile.getTenantId, page, pageSize).map { logPage =>
       Ok(views.html.adminAuditLogs(logPage))
+    }
+  }
+
+  def outboxSummary = secure.admin { profile => implicit request =>
+    adminService.getOutboxSummary(profile.getTenantId).map { summary =>
+      Ok(Json.obj(
+        "pending" -> summary.pending,
+        "published" -> summary.published,
+        "failed" -> summary.failed,
+        "total" -> summary.total
+      ))
+    }
+  }
+
+  def failedOutboxEvents = secure.admin { profile => implicit request =>
+    val page = parsePage(request)
+
+    adminService.getFailedOutboxEvents(profile.getTenantId, page, pageSize).map { result =>
+      Ok(Json.obj(
+        "events" -> result.events.map { event =>
+          Json.obj(
+            "id" -> event.id,
+            "aggregateId" -> event.aggregateId,
+            "eventType" -> event.eventType,
+            "eventVersion" -> event.eventVersion,
+            "attemptCount" -> event.attemptCount,
+            "status" -> event.status,
+            "lastError" -> event.lastError,
+            "availableAt" -> event.availableAt,
+            "createdAt" -> event.createdAt
+          )
+        },
+        "currentPage" -> result.currentPage,
+        "pageSize" -> result.pageSize,
+        "totalItems" -> result.totalItems,
+        "totalPages" -> result.totalPages
+      ))
+    }
+  }
+
+  def replayFailedOutboxEvent(id: String) = secure.admin { profile => implicit request =>
+    Try(java.util.UUID.fromString(id)).toOption match {
+      case Some(outboxId) =>
+        adminService.replayFailedOutboxEvent(profile.getTenantId, outboxId).map {
+          case TodoOutboxReplayResult.Replayed =>
+            Ok(Json.obj(
+              "id" -> id,
+              "replayed" -> true,
+              "message" -> "Outbox event replay icin tekrar queue'ya alindi."
+            ))
+
+          case TodoOutboxReplayResult.NotFound =>
+            NotFound(Json.obj(
+              "id" -> id,
+              "replayed" -> false,
+              "message" -> "Outbox event bulunamadi."
+            ))
+
+          case TodoOutboxReplayResult.NotFailed =>
+            BadRequest(Json.obj(
+              "id" -> id,
+              "replayed" -> false,
+              "message" -> "Sadece FAILED durumundaki event replay edilebilir."
+            ))
+        }
+
+      case None =>
+        scala.concurrent.Future.successful(
+          BadRequest(Json.obj(
+            "id" -> id,
+            "replayed" -> false,
+            "message" -> "Gecersiz outbox id."
+          ))
+        )
     }
   }
 

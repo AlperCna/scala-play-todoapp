@@ -1,6 +1,7 @@
 package services
 
 import dtos._
+import kafka.outbox.{TodoOutboxOperationsService, TodoOutboxReplayResult, TodoOutboxStatusSummary}
 import models.{AuditLog, Todo, User}
 import repositories.{AuditLogRepository, TodoRepository, UserRepository}
 
@@ -13,7 +14,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class AdminServiceImpl @Inject()(
                                   userRepository: UserRepository,
                                   todoRepository: TodoRepository,
-                                  auditLogRepository: AuditLogRepository
+                                  auditLogRepository: AuditLogRepository,
+                                  todoOutboxOperationsService: TodoOutboxOperationsService
                                 )(implicit ec: ExecutionContext) extends AdminService {
 
   private val dateFormatter: DateTimeFormatter =
@@ -166,4 +168,20 @@ class AdminServiceImpl @Inject()(
   override def disableUser(userId: UUID): Future[Boolean] = {
     userRepository.setActive(userId, isActive = false)
   }
+
+  override def getOutboxSummary(tenantId: UUID): Future[TodoOutboxStatusSummary] =
+    todoOutboxOperationsService.summaryForTenant(tenantId)
+
+  override def getFailedOutboxEvents(
+    tenantId: UUID,
+    page: Int,
+    pageSize: Int
+  ): Future[OutboxFailedEventPageResponse] =
+    todoOutboxOperationsService.failedEventsPageForTenant(tenantId, page, pageSize)
+
+  override def replayFailedOutboxEvent(
+    tenantId: UUID,
+    outboxId: UUID
+  ): Future[TodoOutboxReplayResult] =
+    todoOutboxOperationsService.replayFailedEvent(tenantId, outboxId)
 }

@@ -33,8 +33,20 @@ class TodoOutboxMonitoringServiceSpec extends PlaySpec with ScalaFutures {
             case _                          => 0
           })
 
+        override def countByStatusAndTenant(status: String, tenantId: UUID): Future[Int] =
+          Future.successful(0)
+
         override def findPublishable(limit: Int, availableBefore: LocalDateTime): Future[Seq[TodoOutboxEvent]] =
           Future.successful(Seq.empty)
+
+        override def findFailedByTenantPaged(tenantId: UUID, page: Int, pageSize: Int): Future[Seq[TodoOutboxEvent]] =
+          Future.successful(Seq.empty)
+
+        override def findById(id: UUID): Future[Option[TodoOutboxEvent]] =
+          Future.successful(None)
+
+        override def findByIdAndTenant(id: UUID, tenantId: UUID): Future[Option[TodoOutboxEvent]] =
+          Future.successful(None)
 
         override def markPublished(id: UUID, publishedAt: LocalDateTime): Future[Boolean] =
           Future.successful(true)
@@ -46,6 +58,9 @@ class TodoOutboxMonitoringServiceSpec extends PlaySpec with ScalaFutures {
           lastError: String,
           nextStatus: String
         ): Future[Boolean] = Future.successful(true)
+
+        override def resetForReplay(id: UUID, nextAvailableAt: LocalDateTime): Future[Boolean] =
+          Future.successful(true)
       }
 
       whenReady(new TodoOutboxMonitoringService(repository).currentSummary()) { summary =>

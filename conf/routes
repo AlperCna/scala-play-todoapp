@@ -37,5 +37,8 @@ GET     /admin/todos                    controllers.AdminController.todos()
 POST    /admin/users/:id/enable         controllers.AdminController.enableUser(id: String)
 POST    /admin/users/:id/disable        controllers.AdminController.disableUser(id: String)
 GET     /admin/audit-logs              controllers.AdminController.auditLogs()
+GET     /admin/outbox/summary          controllers.AdminController.outboxSummary()
+GET     /admin/outbox/failed           controllers.AdminController.failedOutboxEvents()
+POST    /admin/outbox/:id/replay       controllers.AdminController.replayFailedOutboxEvent(id: String)
 # Static assets
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

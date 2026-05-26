@@ -160,8 +160,20 @@ class TodoOutboxPublishServiceSpec extends PlaySpec with ScalaFutures {
     override def countByStatus(status: String): Future[Int] =
       Future.successful(publishable.count(_.status == status))
 
+    override def countByStatusAndTenant(status: String, tenantId: UUID): Future[Int] =
+      Future.successful(publishable.count(event => event.status == status && event.tenantId == tenantId))
+
     override def findPublishable(limit: Int, availableBefore: LocalDateTime): Future[Seq[TodoOutboxEvent]] =
       Future.successful(publishable.take(limit))
+
+    override def findFailedByTenantPaged(tenantId: UUID, page: Int, pageSize: Int): Future[Seq[TodoOutboxEvent]] =
+      Future.successful(publishable.filter(event => event.status == TodoOutboxStatus.Failed && event.tenantId == tenantId))
+
+    override def findById(id: UUID): Future[Option[TodoOutboxEvent]] =
+      Future.successful(publishable.find(_.id == id))
+
+    override def findByIdAndTenant(id: UUID, tenantId: UUID): Future[Option[TodoOutboxEvent]] =
+      Future.successful(publishable.find(event => event.id == id && event.tenantId == tenantId))
 
     override def markPublished(id: UUID, publishedAt: LocalDateTime): Future[Boolean] = {
       publishedIds = publishedIds :+ id
@@ -178,6 +190,9 @@ class TodoOutboxPublishServiceSpec extends PlaySpec with ScalaFutures {
       failedUpdates = failedUpdates :+ (id, nextAttemptCount, nextAvailableAt, lastError, nextStatus)
       Future.successful(true)
     }
+
+    override def resetForReplay(id: UUID, nextAvailableAt: LocalDateTime): Future[Boolean] =
+      Future.successful(true)
   }
 
   private class StubKafkaTodoEventPublisher(shouldFail: Boolean = false) extends KafkaTodoEventPublisher(
