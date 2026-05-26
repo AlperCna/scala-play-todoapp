@@ -35,8 +35,12 @@ class TodoOutboxPublishServiceSpec extends PlaySpec with ScalaFutures {
         new TodoOutboxWorkerSettingsLoader(enabledKafkaConfig)
       )
 
-      whenReady(service.publishPendingBatch()) { publishedCount =>
-        publishedCount mustBe 1
+      whenReady(service.publishPendingBatch()) { result =>
+        result.processed mustBe 1
+        result.published mustBe 1
+        result.retried mustBe 0
+        result.failed mustBe 0
+        result.skipped mustBe false
         publisher.publishedEvents.map(_.eventType) mustBe Seq("TodoCreated")
         repository.publishedIds must contain(event.id)
       }
@@ -56,8 +60,11 @@ class TodoOutboxPublishServiceSpec extends PlaySpec with ScalaFutures {
         new TodoOutboxWorkerSettingsLoader(enabledKafkaConfig)
       )
 
-      whenReady(service.publishPendingBatch()) { publishedCount =>
-        publishedCount mustBe 0
+      whenReady(service.publishPendingBatch()) { result =>
+        result.processed mustBe 1
+        result.published mustBe 0
+        result.retried mustBe 1
+        result.failed mustBe 0
         repository.failedUpdates.head._2 mustBe 2
         repository.failedUpdates.head._5 mustBe TodoOutboxStatus.Pending
       }
@@ -77,8 +84,11 @@ class TodoOutboxPublishServiceSpec extends PlaySpec with ScalaFutures {
         new TodoOutboxWorkerSettingsLoader(enabledKafkaConfig)
       )
 
-      whenReady(service.publishPendingBatch()) { publishedCount =>
-        publishedCount mustBe 0
+      whenReady(service.publishPendingBatch()) { result =>
+        result.processed mustBe 1
+        result.published mustBe 0
+        result.retried mustBe 0
+        result.failed mustBe 1
         repository.failedUpdates.head._2 mustBe 5
         repository.failedUpdates.head._5 mustBe TodoOutboxStatus.Failed
       }
@@ -97,8 +107,12 @@ class TodoOutboxPublishServiceSpec extends PlaySpec with ScalaFutures {
         new TodoOutboxWorkerSettingsLoader(Configuration("kafka.enabled" -> false))
       )
 
-      whenReady(service.publishPendingBatch()) { publishedCount =>
-        publishedCount mustBe 0
+      whenReady(service.publishPendingBatch()) { result =>
+        result.processed mustBe 0
+        result.published mustBe 0
+        result.retried mustBe 0
+        result.failed mustBe 0
+        result.skipped mustBe true
         publisher.publishedEvents mustBe empty
         repository.publishedIds mustBe empty
       }

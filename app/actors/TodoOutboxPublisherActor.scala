@@ -14,6 +14,7 @@ object TodoOutboxPublisherActor {
     Props(new TodoOutboxPublisherActor(publishService, settingsLoader))
 
   case object PublishPending
+  private case object PublishCompleted
 }
 
 class TodoOutboxPublisherActor(
@@ -22,6 +23,7 @@ class TodoOutboxPublisherActor(
 )(implicit ec: ExecutionContext) extends Actor with ActorLogging {
 
   import TodoOutboxPublisherActor._
+  private var publishInProgress = false
 
   override def preStart(): Unit = {
     val settings = settingsLoader.load()
@@ -41,10 +43,28 @@ class TodoOutboxPublisherActor(
 
   override def receive: Receive = {
     case PublishPending =>
-      publishService.publishPendingBatch().foreach { publishedCount =>
-        if (publishedCount > 0) {
-          log.info(s"[TodoOutboxPublisher] $publishedCount adet outbox kaydi publish edildi.")
+      if (publishInProgress) {
+        log.warning("[TodoOutboxPublisher] Onceki batch hala calisiyor. Bu tick atlandi.")
+      } else {
+        publishInProgress = true
+        publishService.publishPendingBatch().onComplete { result =>
+          result.foreach { summary =>
+            if (!summary.skipped && summary.processed > 0) {
+              log.info(
+                s"[TodoOutboxPublisher] processed=${summary.processed}, published=${summary.published}, retried=${summary.retried}, failed=${summary.failed}"
+              )
+            }
+          }
+
+          result.failed.foreach { ex =>
+            log.error(ex, "[TodoOutboxPublisher] Batch publish sirasinda beklenmeyen hata.")
+          }
+
+          self ! PublishCompleted
         }
       }
+
+    case PublishCompleted =>
+      publishInProgress = false
   }
 }
