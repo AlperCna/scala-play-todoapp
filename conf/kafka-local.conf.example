@@ -1,0 +1,23 @@
+include "application.conf"
+
+kafka {
+  enabled = true
+  bootstrapServers = "localhost:9092"
+  clientId = "todo-play-app-local"
+  topic.todoEvents = "todo.events.v1"
+
+  producer {
+    acks = "all"
+    enableIdempotence = true
+    requestTimeoutMs = 30000
+    deliveryTimeoutMs = 120000
+    maxInFlightRequestsPerConnection = 5
+  }
+
+  outbox {
+    pollIntervalSeconds = 10
+    batchSize = 10
+    maxAttempts = 5
+    initialRetryDelaySeconds = 30
+  }
+}

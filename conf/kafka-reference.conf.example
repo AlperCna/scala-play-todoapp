@@ -1,4 +1,5 @@
-# Kafka placeholders (Phase 1 reference)
+# Kafka reference values shared across the phased integration.
+# For a runnable local Kafka setup, also see conf/kafka-local.conf.example.
 kafka {
   enabled = false
   bootstrapServers = "localhost:9092"

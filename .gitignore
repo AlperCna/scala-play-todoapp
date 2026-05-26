@@ -10,3 +10,6 @@ target
 
 # Environment secrets
 .env
+
+# Local Kafka overrides
+conf/kafka-local.conf
