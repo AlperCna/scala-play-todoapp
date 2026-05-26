@@ -202,6 +202,12 @@ Topic'in gercekten olustugunu dogrular.
 ### `scripts/read-kafka-topic.ps1`
 Topic'teki mesajlari hizli sekilde okumayi saglar.
 
+### `scripts/start-kafka-enabled-app.ps1`
+Play uygulamasini Kafka acik local resource config ile baslatir.
+
+### `scripts/stop-local-kafka.ps1`
+Local Kafka broker ve UI ortamını durdurur.
+
 ### `docs/kafka-local-runbook.md`
 Gercek local entegrasyonun adim adim rehberidir.
 
@@ -244,7 +250,7 @@ Bu noktada sistem artik sadece "Kafka'ya hazir kod" degil.
 Ayni zamanda:
 - local broker ile calistirilabilir
 - topic'i kontrollu sekilde yaratilabilir
-- Kafka acik modda kosturulabilir
+- Kafka acik modda costurulabilir
 - outbox publish akisina bakilabilir
 - topic'te gercek mesajlar gorulebilir
 

@@ -73,13 +73,14 @@ Burada `todo-play-local` cluster'ini ve `todo.events.v1` topic'ini gormelisin.
 PowerShell:
 
 ```powershell
-sbt -Dconfig.file=conf/kafka-local.conf.example run
+.\scripts\start-kafka-enabled-app.ps1
 ```
 
 Bu config neden ayri?
 - `conf/application.conf` kullanicinin lokal ayarlarini tasiyor
 - onu bozmak istemiyoruz
 - bu dosya sadece Kafka override'larini aciyor
+- classpath uzerinden `config.resource` ile yüklendigi icin `application.conf` ayarlarini da goruyor
 
 ### 2. Todo islemi olustur
 Uygulamadan:
@@ -146,6 +147,13 @@ Normal mod:
 
 ```powershell
 sbt run
+```
+
+## Kafka Ortamini Kapatma
+PowerShell:
+
+```powershell
+.\scripts\stop-local-kafka.ps1
 ```
 
 Bu durumda:

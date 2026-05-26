@@ -1,7 +1,7 @@
 package repositories
 
 import models.Todo
-import play.api.db.Database
+import play.api.db.DBApi
 
 import java.sql.{ResultSet, Types}
 import java.time.LocalDateTime
@@ -11,8 +11,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TodoRepositoryImpl @Inject()(
-                                    db: Database
+                                    dbApi: DBApi
                                   )(implicit ec: ExecutionContext) extends TodoRepository {
+
+  private val db = dbApi.database("default")
 
   private def mapTodo(rs: ResultSet): Todo = {
     Todo(

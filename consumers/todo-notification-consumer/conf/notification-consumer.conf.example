@@ -1,0 +1,7 @@
+notification-consumer {
+  bootstrapServers = "localhost:9092"
+  topic = "todo.events.v1"
+  groupId = "todo-notification-consumer-v1"
+  dispatchMode = "sandbox"
+  supportedEventVersion = 1
+}

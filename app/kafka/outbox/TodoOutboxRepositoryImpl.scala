@@ -1,6 +1,6 @@
 package kafka.outbox
 
-import play.api.db.Database
+import play.api.db.DBApi
 
 import java.sql.{ResultSet, Types}
 import java.time.LocalDateTime
@@ -10,8 +10,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TodoOutboxRepositoryImpl @Inject()(
-  db: Database
+  dbApi: DBApi
 )(implicit ec: ExecutionContext) extends TodoOutboxRepository {
+
+  private val db = dbApi.database("default")
 
   override def create(outboxEvent: TodoOutboxEvent): Future[TodoOutboxEvent] = Future {
     db.withConnection { conn =>

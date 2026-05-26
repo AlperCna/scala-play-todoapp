@@ -1,7 +1,7 @@
 package repositories
 
 import models.Tenant
-import play.api.db.Database
+import play.api.db.DBApi
 
 import java.sql.{ResultSet, Types}
 import java.util.UUID
@@ -10,8 +10,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TenantRepositoryImpl @Inject()(
-                                      db: Database
+                                      dbApi: DBApi
                                     )(implicit ec: ExecutionContext) extends TenantRepository {
+
+  private val db = dbApi.database("default")
 
   private def mapTenant(rs: ResultSet): Tenant = {
     Tenant(
