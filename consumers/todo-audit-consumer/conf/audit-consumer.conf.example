@@ -1,0 +1,14 @@
+audit-consumer {
+  bootstrapServers = "localhost:9092"
+  topic = "todo.events.v1"
+  groupId = "todo-audit-consumer-v1"
+  consumerName = "todo-audit-consumer-v1"
+  supportedEventVersion = 1
+
+  database {
+    driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+    url = "jdbc:sqlserver://127.0.0.1:1433;databaseName=ScalaTodoPlayAppDb;encrypt=true;trustServerCertificate=true"
+    username = "sa"
+    password = "123456"
+  }
+}
