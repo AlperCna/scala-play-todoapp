@@ -14,12 +14,14 @@ A Todo application built with Scala and Play Framework 2.9. The project now incl
 - [Kafka Phase 9](docs/kafka-phase-9.md)
 - [Kafka Phase 10](docs/kafka-phase-10.md)
 - [Kafka Phase 11](docs/kafka-phase-11.md)
+- [Kafka Phase 12](docs/kafka-phase-12.md)
 - [Kafka Local Runbook](docs/kafka-local-runbook.md)
 - [Kafka Rollout Checklist](docs/kafka-rollout-checklist.md)
 
 ## Consumer Skeletons
 - [todo-notification-consumer](consumers/todo-notification-consumer/README.md)
 - [todo-audit-consumer](consumers/todo-audit-consumer/README.md)
+- [todo-analytics-consumer](consumers/todo-analytics-consumer/README.md)
 
 ## Local Kafka Quick Start
 PowerShell:
@@ -38,6 +40,7 @@ Useful helper scripts:
 - `.\scripts\read-kafka-topic.ps1 -MaxMessages 5`
 - `.\scripts\start-notification-consumer.ps1`
 - `.\scripts\start-audit-consumer.ps1`
+- `.\scripts\start-analytics-consumer.ps1`
 - `.\scripts\check-outbox-summary.ps1`
 - `.\scripts\check-kafka-rollout.ps1`
 - `.\scripts\stop-local-kafka.ps1`
