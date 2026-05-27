@@ -3,7 +3,7 @@ package kafka.outbox
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -63,6 +63,7 @@ class TodoOutboxOperationsServiceSpec extends PlaySpec with ScalaFutures {
       whenReady(service.replayFailedEvent(tenantId, failedEvent.id)) { result =>
         result mustBe TodoOutboxReplayResult.Replayed
         repository.replayedIds must contain(failedEvent.id)
+        repository.lastReplayAvailableAt.value.isBefore(LocalDateTime.now(ZoneOffset.UTC).plusSeconds(1)) mustBe true
       }
     }
 
@@ -108,6 +109,7 @@ class TodoOutboxOperationsServiceSpec extends PlaySpec with ScalaFutures {
     var failedByTenant: Seq[TodoOutboxEvent] = Seq.empty
     var eventByIdAndTenant: Option[TodoOutboxEvent] = None
     var replayedIds: Seq[UUID] = Seq.empty
+    var lastReplayAvailableAt: Option[LocalDateTime] = None
 
     override def create(outboxEvent: TodoOutboxEvent): Future[TodoOutboxEvent] =
       Future.successful(outboxEvent)
@@ -146,6 +148,7 @@ class TodoOutboxOperationsServiceSpec extends PlaySpec with ScalaFutures {
 
     override def resetForReplay(id: UUID, nextAvailableAt: LocalDateTime): Future[Boolean] = {
       replayedIds = replayedIds :+ id
+      lastReplayAvailableAt = Some(nextAvailableAt)
       Future.successful(true)
     }
   }

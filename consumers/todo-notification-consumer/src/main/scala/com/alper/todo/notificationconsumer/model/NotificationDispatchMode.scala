@@ -16,4 +16,11 @@ object NotificationDispatchMode {
   case object Live extends NotificationDispatchMode {
     override val value: String = "live"
   }
+
+  def fromString(raw: String): NotificationDispatchMode =
+    raw.trim.toLowerCase match {
+      case Disabled.value => Disabled
+      case Live.value     => Live
+      case _              => Sandbox
+    }
 }

@@ -44,3 +44,18 @@ Bu testler sunlari dogrular:
 - unsupported version ignore ediliyor mu
 - unsupported event type ignore ediliyor mu
 - desteklenen eventler icin bildirim komutu olusuyor mu
+
+## Nasil Calistirilir?
+Root repo icinden:
+
+```powershell
+.\scripts\start-notification-consumer.ps1
+```
+
+Bu komut consumer'i su davranisla kaldirir:
+- Kafka topic: `todo.events.v1`
+- group id: `todo-notification-consumer-v1`
+- varsayilan dispatch mode: `sandbox`
+- offset commit: yalnizca mesaj handle edildikten sonra
+
+Ilk implementasyonda bildirim gonderimi gercek email yerine log/sandbox davranisidir.

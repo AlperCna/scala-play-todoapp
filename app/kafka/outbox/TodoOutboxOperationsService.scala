@@ -2,7 +2,7 @@ package kafka.outbox
 
 import dtos.{OutboxFailedEventPageResponse, OutboxFailedEventResponse}
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
@@ -66,7 +66,7 @@ class TodoOutboxOperationsService @Inject()(
 
       case Some(_) =>
         outboxRepository
-          .resetForReplay(outboxId, LocalDateTime.now())
+          .resetForReplay(outboxId, LocalDateTime.now(ZoneOffset.UTC))
           .map(_ => TodoOutboxReplayResult.Replayed)
     }
 

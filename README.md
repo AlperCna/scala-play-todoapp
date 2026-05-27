@@ -12,6 +12,7 @@ A Todo application built with Scala and Play Framework 2.9. The project now incl
 - [Kafka Phase 7](docs/kafka-phase-7.md)
 - [Kafka Phase 8](docs/kafka-phase-8.md)
 - [Kafka Phase 9](docs/kafka-phase-9.md)
+- [Kafka Phase 10](docs/kafka-phase-10.md)
 - [Kafka Local Runbook](docs/kafka-local-runbook.md)
 - [Kafka Rollout Checklist](docs/kafka-rollout-checklist.md)
 
@@ -33,6 +34,7 @@ Useful helper scripts:
 - `.\scripts\create-kafka-topics.ps1`
 - `.\scripts\list-kafka-topics.ps1`
 - `.\scripts\read-kafka-topic.ps1 -MaxMessages 5`
+- `.\scripts\start-notification-consumer.ps1`
 - `.\scripts\check-outbox-summary.ps1`
 - `.\scripts\check-kafka-rollout.ps1`
 - `.\scripts\stop-local-kafka.ps1`

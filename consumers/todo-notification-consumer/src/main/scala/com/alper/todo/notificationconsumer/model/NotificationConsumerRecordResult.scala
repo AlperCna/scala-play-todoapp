@@ -1,0 +1,12 @@
+package com.alper.todo.notificationconsumer.model
+
+sealed trait NotificationConsumerRecordResult
+
+object NotificationConsumerRecordResult {
+  case object Processed extends NotificationConsumerRecordResult
+  case object DuplicateIgnored extends NotificationConsumerRecordResult
+  case object UnsupportedVersionIgnored extends NotificationConsumerRecordResult
+  case object UnsupportedEventIgnored extends NotificationConsumerRecordResult
+  case object DisabledIgnored extends NotificationConsumerRecordResult
+  case object MalformedPayloadIgnored extends NotificationConsumerRecordResult
+}
