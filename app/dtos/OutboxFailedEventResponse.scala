@@ -6,8 +6,11 @@ case class OutboxFailedEventResponse(
   eventType: String,
   eventVersion: Int,
   attemptCount: Int,
+  replayCount: Int,
   status: String,
   lastError: Option[String],
   availableAt: String,
-  createdAt: String
+  createdAt: String,
+  lastReplayedAt: Option[String],
+  lastReplayedByUserId: Option[String]
 )

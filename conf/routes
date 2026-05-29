@@ -39,6 +39,8 @@ POST    /admin/users/:id/disable        controllers.AdminController.disableUser(
 GET     /admin/audit-logs              controllers.AdminController.auditLogs()
 GET     /admin/outbox/summary          controllers.AdminController.outboxSummary()
 GET     /admin/outbox/failed           controllers.AdminController.failedOutboxEvents()
+GET     /admin/outbox/replay-logs      controllers.AdminController.outboxReplayLogs()
+POST    /admin/outbox/replay           controllers.AdminController.replayFailedOutboxEvents()
 POST    /admin/outbox/:id/replay       controllers.AdminController.replayFailedOutboxEvent(id: String)
 # Static assets
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

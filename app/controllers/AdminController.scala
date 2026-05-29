@@ -1,5 +1,7 @@
 package controllers
 
+import dtos.OutboxBulkReplayResultResponse
+import kafka.outbox.TodoOutboxReplayFilters
 import kafka.outbox.TodoOutboxReplayResult
 import security.{CustomProfile, SecureAction}
 import services.AdminService
@@ -8,6 +10,7 @@ import javax.inject._
 import play.api.libs.json.Json
 import play.api.mvc._
 
+import java.time.{LocalDate, LocalDateTime, LocalTime}
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
@@ -71,8 +74,9 @@ class AdminController @Inject()(
 
   def failedOutboxEvents = secure.admin { profile => implicit request =>
     val page = parsePage(request)
+    val filters = parseOutboxReplayFilters(request)
 
-    adminService.getFailedOutboxEvents(profile.getTenantId, page, pageSize).map { result =>
+    adminService.getFailedOutboxEvents(profile.getTenantId, page, pageSize, filters).map { result =>
       Ok(Json.obj(
         "events" -> result.events.map { event =>
           Json.obj(
@@ -81,16 +85,24 @@ class AdminController @Inject()(
             "eventType" -> event.eventType,
             "eventVersion" -> event.eventVersion,
             "attemptCount" -> event.attemptCount,
+            "replayCount" -> event.replayCount,
             "status" -> event.status,
             "lastError" -> event.lastError,
             "availableAt" -> event.availableAt,
-            "createdAt" -> event.createdAt
+            "createdAt" -> event.createdAt,
+            "lastReplayedAt" -> event.lastReplayedAt,
+            "lastReplayedByUserId" -> event.lastReplayedByUserId
           )
         },
         "currentPage" -> result.currentPage,
         "pageSize" -> result.pageSize,
         "totalItems" -> result.totalItems,
-        "totalPages" -> result.totalPages
+        "totalPages" -> result.totalPages,
+        "filters" -> Json.obj(
+          "eventType" -> filters.normalizedEventType,
+          "createdFrom" -> filters.createdFrom.map(_.toString),
+          "createdTo" -> filters.createdTo.map(_.toString)
+        )
       ))
     }
   }
@@ -98,7 +110,7 @@ class AdminController @Inject()(
   def replayFailedOutboxEvent(id: String) = secure.admin { profile => implicit request =>
     Try(java.util.UUID.fromString(id)).toOption match {
       case Some(outboxId) =>
-        adminService.replayFailedOutboxEvent(profile.getTenantId, outboxId).map {
+        adminService.replayFailedOutboxEvent(profile.getTenantId, profile.getUserId, outboxId).map {
           case TodoOutboxReplayResult.Replayed =>
             Ok(Json.obj(
               "id" -> id,
@@ -129,6 +141,61 @@ class AdminController @Inject()(
             "message" -> "Gecersiz outbox id."
           ))
         )
+    }
+  }
+
+  def replayFailedOutboxEvents = secure.admin { profile => implicit request =>
+    val filters = parseOutboxReplayFilters(request)
+
+    adminService.replayFailedOutboxEvents(profile.getTenantId, profile.getUserId, filters).map { result =>
+      val response = OutboxBulkReplayResultResponse(
+        replayedCount = result.replayedCount,
+        matchedCount = result.matchedCount,
+        limited = result.limited,
+        limit = result.limit,
+        eventType = filters.normalizedEventType,
+        createdFrom = filters.createdFrom.map(_.toString),
+        createdTo = filters.createdTo.map(_.toString),
+        message =
+          if (result.replayedCount == 0) "Replay icin uygun FAILED event bulunamadi."
+          else s"${result.replayedCount} event tekrar queue'ya alindi."
+      )
+
+      Ok(Json.obj(
+        "replayedCount" -> response.replayedCount,
+        "matchedCount" -> response.matchedCount,
+        "limited" -> response.limited,
+        "limit" -> response.limit,
+        "eventType" -> response.eventType,
+        "createdFrom" -> response.createdFrom,
+        "createdTo" -> response.createdTo,
+        "message" -> response.message
+      ))
+    }
+  }
+
+  def outboxReplayLogs = secure.admin { profile => implicit request =>
+    val page = parsePage(request)
+
+    adminService.getOutboxReplayLogs(profile.getTenantId, page, pageSize).map { result =>
+      Ok(Json.obj(
+        "logs" -> result.logs.map { log =>
+          Json.obj(
+            "id" -> log.id,
+            "outboxId" -> log.outboxId,
+            "requestedByUserId" -> log.requestedByUserId,
+            "eventType" -> log.eventType,
+            "replayMode" -> log.replayMode,
+            "filterSummary" -> log.filterSummary,
+            "replayedAt" -> log.replayedAt,
+            "createdAt" -> log.createdAt
+          )
+        },
+        "currentPage" -> result.currentPage,
+        "pageSize" -> result.pageSize,
+        "totalItems" -> result.totalItems,
+        "totalPages" -> result.totalPages
+      ))
     }
   }
 
@@ -167,4 +234,21 @@ class AdminController @Inject()(
       .flatMap(v => Try(v.toInt).toOption)
       .filter(_ > 0)
       .getOrElse(1)
+
+  private def parseOutboxReplayFilters(request: RequestHeader): TodoOutboxReplayFilters =
+    TodoOutboxReplayFilters(
+      eventType = request.getQueryString("eventType"),
+      createdFrom = request.getQueryString("createdFrom").flatMap(parseFlexibleDateTime),
+      createdTo = request.getQueryString("createdTo").flatMap(parseFlexibleDateTimeEnd)
+    )
+
+  private def parseFlexibleDateTime(value: String): Option[LocalDateTime] =
+    Try(LocalDateTime.parse(value)).toOption.orElse {
+      Try(LocalDate.parse(value).atStartOfDay()).toOption
+    }
+
+  private def parseFlexibleDateTimeEnd(value: String): Option[LocalDateTime] =
+    Try(LocalDateTime.parse(value)).toOption.orElse {
+      Try(LocalDate.parse(value).atTime(LocalTime.MAX)).toOption
+    }
 }

@@ -18,5 +18,8 @@ case class TodoOutboxEvent(
   availableAt: LocalDateTime,
   publishedAt: Option[LocalDateTime],
   lastError: Option[String],
-  createdAt: LocalDateTime
+  createdAt: LocalDateTime,
+  replayCount: Int,
+  lastReplayedAt: Option[LocalDateTime],
+  lastReplayedByUserId: Option[UUID]
 )

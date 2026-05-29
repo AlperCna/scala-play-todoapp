@@ -1,7 +1,7 @@
 package services
 
-import dtos.{AdminDashboardResponse, AdminTodoPageResponse, AuditLogPageResponse, OutboxFailedEventPageResponse, UserPageResponse}
-import kafka.outbox.{TodoOutboxReplayResult, TodoOutboxStatusSummary}
+import dtos.{AdminDashboardResponse, AdminTodoPageResponse, AuditLogPageResponse, OutboxFailedEventPageResponse, OutboxReplayLogPageResponse, UserPageResponse}
+import kafka.outbox.{TodoOutboxBulkReplayResult, TodoOutboxReplayFilters, TodoOutboxReplayResult, TodoOutboxStatusSummary}
 
 import java.util.UUID
 import scala.concurrent.Future
@@ -40,11 +40,25 @@ trait AdminService {
   def getFailedOutboxEvents(
     tenantId: UUID,
     page: Int,
-    pageSize: Int
+    pageSize: Int,
+    filters: TodoOutboxReplayFilters
   ): Future[OutboxFailedEventPageResponse]
 
   def replayFailedOutboxEvent(
     tenantId: UUID,
+    requestedByUserId: UUID,
     outboxId: UUID
   ): Future[TodoOutboxReplayResult]
+
+  def replayFailedOutboxEvents(
+    tenantId: UUID,
+    requestedByUserId: UUID,
+    filters: TodoOutboxReplayFilters
+  ): Future[TodoOutboxBulkReplayResult]
+
+  def getOutboxReplayLogs(
+    tenantId: UUID,
+    page: Int,
+    pageSize: Int
+  ): Future[OutboxReplayLogPageResponse]
 }

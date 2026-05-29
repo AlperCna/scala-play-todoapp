@@ -39,7 +39,10 @@ class TodoOutboxEventFactory @Inject()() {
       availableAt = now,
       publishedAt = None,
       lastError = None,
-      createdAt = now
+      createdAt = now,
+      replayCount = 0,
+      lastReplayedAt = None,
+      lastReplayedByUserId = None
     )
   }
 }

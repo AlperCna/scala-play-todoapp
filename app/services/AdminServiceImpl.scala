@@ -1,7 +1,7 @@
 package services
 
 import dtos._
-import kafka.outbox.{TodoOutboxOperationsService, TodoOutboxReplayResult, TodoOutboxStatusSummary}
+import kafka.outbox.{TodoOutboxBulkReplayResult, TodoOutboxOperationsService, TodoOutboxReplayFilters, TodoOutboxReplayResult, TodoOutboxStatusSummary}
 import models.{AuditLog, Todo, User}
 import repositories.{AuditLogRepository, TodoRepository, UserRepository}
 
@@ -175,13 +175,29 @@ class AdminServiceImpl @Inject()(
   override def getFailedOutboxEvents(
     tenantId: UUID,
     page: Int,
-    pageSize: Int
+    pageSize: Int,
+    filters: TodoOutboxReplayFilters
   ): Future[OutboxFailedEventPageResponse] =
-    todoOutboxOperationsService.failedEventsPageForTenant(tenantId, page, pageSize)
+    todoOutboxOperationsService.failedEventsPageForTenant(tenantId, page, pageSize, filters)
 
   override def replayFailedOutboxEvent(
     tenantId: UUID,
+    requestedByUserId: UUID,
     outboxId: UUID
   ): Future[TodoOutboxReplayResult] =
-    todoOutboxOperationsService.replayFailedEvent(tenantId, outboxId)
+    todoOutboxOperationsService.replayFailedEvent(tenantId, requestedByUserId, outboxId)
+
+  override def replayFailedOutboxEvents(
+    tenantId: UUID,
+    requestedByUserId: UUID,
+    filters: TodoOutboxReplayFilters
+  ): Future[TodoOutboxBulkReplayResult] =
+    todoOutboxOperationsService.replayFailedEventsInBulk(tenantId, requestedByUserId, filters)
+
+  override def getOutboxReplayLogs(
+    tenantId: UUID,
+    page: Int,
+    pageSize: Int
+  ): Future[OutboxReplayLogPageResponse] =
+    todoOutboxOperationsService.replayLogsPageForTenant(tenantId, page, pageSize)
 }

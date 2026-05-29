@@ -25,7 +25,10 @@ class TodoOutboxEnvelopeFactorySpec extends PlaySpec {
         availableAt = LocalDateTime.now(),
         publishedAt = None,
         lastError = None,
-        createdAt = LocalDateTime.of(2026, 5, 26, 12, 0)
+        createdAt = LocalDateTime.of(2026, 5, 26, 12, 0),
+        replayCount = 0,
+        lastReplayedAt = None,
+        lastReplayedByUserId = None
       )
 
       val envelope = new TodoOutboxEnvelopeFactory().toEnvelope(outboxEvent)
