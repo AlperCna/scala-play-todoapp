@@ -26,7 +26,10 @@ class AuditKafkaRecordHandlerSpec extends AnyWordSpec with Matchers with ScalaFu
           topic = "todo.events.v1",
           groupId = "todo-audit-consumer-v1",
           consumerName = "todo-audit-consumer-v1",
+          dlqTopic = "todo.events.dlq.v1",
           supportedEventVersion = 1,
+          maxRetries = 3,
+          retryBackoffMillis = 250L,
           database = AuditConsumerDatabaseSettings("driver", "url", "sa", "pw")
         ),
         auditLogWriter = new NoOpAuditLogWriter(),
@@ -50,7 +53,10 @@ class AuditKafkaRecordHandlerSpec extends AnyWordSpec with Matchers with ScalaFu
           topic = "todo.events.v1",
           groupId = "todo-audit-consumer-v1",
           consumerName = "todo-audit-consumer-v1",
+          dlqTopic = "todo.events.dlq.v1",
           supportedEventVersion = 1,
+          maxRetries = 3,
+          retryBackoffMillis = 250L,
           database = AuditConsumerDatabaseSettings("driver", "url", "sa", "pw")
         ),
         auditLogWriter = new NoOpAuditLogWriter(),

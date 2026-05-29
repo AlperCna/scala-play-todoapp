@@ -67,7 +67,10 @@ class AuditEventProcessorSpec extends AnyWordSpec with Matchers with ScalaFuture
       topic = "todo.events.v1",
       groupId = "todo-audit-consumer-v1",
       consumerName = "todo-audit-consumer-v1",
+      dlqTopic = "todo.events.dlq.v1",
       supportedEventVersion = version,
+      maxRetries = 3,
+      retryBackoffMillis = 250L,
       database = AuditConsumerDatabaseSettings("driver", "url", "sa", "pw")
     )
 

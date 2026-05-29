@@ -15,8 +15,18 @@ class NotificationConsumerSettingsLoaderSpec extends AnyWordSpec with Matchers {
           |  bootstrapServers = "localhost:9092"
           |  topic = "todo.events.v1"
           |  groupId = "todo-notification-consumer-v1"
+          |  consumerName = "todo-notification-consumer-v1"
+          |  dlqTopic = "todo.events.dlq.v1"
           |  dispatchMode = "live"
           |  supportedEventVersion = 2
+          |  maxRetries = 4
+          |  retryBackoffMillis = 500
+          |  database {
+          |    driver = "driver"
+          |    url = "jdbc:test"
+          |    username = "user"
+          |    password = "pass"
+          |  }
           |}
           |""".stripMargin
       )
@@ -26,8 +36,13 @@ class NotificationConsumerSettingsLoaderSpec extends AnyWordSpec with Matchers {
       settings.bootstrapServers shouldBe "localhost:9092"
       settings.topic shouldBe "todo.events.v1"
       settings.groupId shouldBe "todo-notification-consumer-v1"
+      settings.consumerName shouldBe "todo-notification-consumer-v1"
+      settings.dlqTopic shouldBe "todo.events.dlq.v1"
       settings.dispatchMode shouldBe Live
       settings.supportedEventVersion shouldBe 2
+      settings.maxRetries shouldBe 4
+      settings.retryBackoffMillis shouldBe 500L
+      settings.database.url shouldBe "jdbc:test"
     }
 
     "default unknown dispatch modes to sandbox" in {
@@ -37,8 +52,18 @@ class NotificationConsumerSettingsLoaderSpec extends AnyWordSpec with Matchers {
           |  bootstrapServers = "localhost:9092"
           |  topic = "todo.events.v1"
           |  groupId = "todo-notification-consumer-v1"
+          |  consumerName = "todo-notification-consumer-v1"
+          |  dlqTopic = "todo.events.dlq.v1"
           |  dispatchMode = "mystery"
           |  supportedEventVersion = 1
+          |  maxRetries = 3
+          |  retryBackoffMillis = 250
+          |  database {
+          |    driver = "driver"
+          |    url = "jdbc:test"
+          |    username = "user"
+          |    password = "pass"
+          |  }
           |}
           |""".stripMargin
       )

@@ -3,7 +3,10 @@ analytics-consumer {
   topic = "todo.events.v1"
   groupId = "todo-analytics-consumer-group"
   consumerName = "todo-analytics-consumer"
+  dlqTopic = "todo.events.dlq.v1"
   supportedEventVersion = 1
+  maxRetries = 3
+  retryBackoffMillis = 250
 
   database {
     driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"

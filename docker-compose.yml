@@ -50,7 +50,9 @@ services:
     command:
       - >-
         kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic todo.events.v1 --partitions 3 --replication-factor 1 &&
-        kafka-topics --bootstrap-server kafka:29092 --describe --topic todo.events.v1
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic todo.events.dlq.v1 --partitions 3 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:29092 --describe --topic todo.events.v1 &&
+        kafka-topics --bootstrap-server kafka:29092 --describe --topic todo.events.dlq.v1
     restart: "no"
 
 volumes:

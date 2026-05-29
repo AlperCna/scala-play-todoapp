@@ -13,7 +13,7 @@ class InMemoryProcessedEventStore(implicit ec: ExecutionContext) extends Process
   override def contains(eventId: UUID): Future[Boolean] =
     Future.successful(processedIds.contains(eventId))
 
-  override def markProcessed(eventId: UUID): Future[Unit] = Future.successful {
+  override def markProcessed(eventId: UUID, tenantId: UUID): Future[Unit] = Future.successful {
     processedIds.add(eventId)
     ()
   }

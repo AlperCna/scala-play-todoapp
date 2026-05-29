@@ -12,6 +12,9 @@ case class AnalyticsConsumerSettings(
   topic: String,
   groupId: String,
   consumerName: String,
+  dlqTopic: String,
   supportedEventVersion: Int,
+  maxRetries: Int,
+  retryBackoffMillis: Long,
   database: AnalyticsConsumerDatabaseSettings
 )

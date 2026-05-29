@@ -1,7 +1,9 @@
 package com.alper.todo.notificationconsumer
 
 import com.alper.todo.notificationconsumer.config.{NotificationConsumerSettings, NotificationConsumerSettingsLoader}
-import com.alper.todo.notificationconsumer.infrastructure.{InMemoryProcessedEventStore, LoggingNotificationSender}
+import com.alper.todo.notificationconsumer.infrastructure.{JdbcProcessedEventStore, KafkaDeadLetterPublisher, LoggingNotificationSender}
+import com.alper.todo.notificationconsumer.model.NotificationConsumerRecordResult
+import com.alper.todo.notificationconsumer.model.NotificationConsumerRecordResult.{DisabledIgnored, DuplicateIgnored, MalformedPayloadIgnored, Processed, UnsupportedEventIgnored, UnsupportedVersionIgnored}
 import com.alper.todo.notificationconsumer.service.{NotificationCommandFactory, NotificationEventProcessor, NotificationKafkaRecordHandler}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord, KafkaConsumer, OffsetAndMetadata}
 import org.apache.kafka.common.TopicPartition
@@ -20,10 +22,11 @@ object NotificationConsumerApp extends App {
 
   private val settings = NotificationConsumerSettingsLoader.load()
   private val consumer = new KafkaConsumer[String, String](consumerProperties(settings))
+  private val dlqPublisher = new KafkaDeadLetterPublisher(settings.bootstrapServers, settings.dlqTopic, settings.consumerName)
   private val handler = new NotificationKafkaRecordHandler(
     new NotificationEventProcessor(
       settings = settings,
-      processedEventStore = new InMemoryProcessedEventStore(),
+      processedEventStore = new JdbcProcessedEventStore(settings.database, settings.consumerName),
       notificationSender = new LoggingNotificationSender(),
       commandFactory = new NotificationCommandFactory()
     )
@@ -32,10 +35,11 @@ object NotificationConsumerApp extends App {
   Runtime.getRuntime.addShutdownHook(new Thread(() => {
     println("[INFO] notification-consumer shutdown requested")
     consumer.wakeup()
+    dlqPublisher.close()
   }))
 
   println(
-    s"[INFO] notification-consumer starting topic=${settings.topic} groupId=${settings.groupId} mode=${settings.dispatchMode.value}"
+    s"[INFO] notification-consumer starting topic=${settings.topic} groupId=${settings.groupId} mode=${settings.dispatchMode.value} dlqTopic=${settings.dlqTopic}"
   )
 
   consumer.subscribe(Collections.singletonList(settings.topic))
@@ -45,7 +49,14 @@ object NotificationConsumerApp extends App {
       val records = consumer.poll(Duration.ofSeconds(1))
 
       for (record <- records.iterator().asScala) {
-        processRecord(record)
+        try {
+          processRecord(record)
+        } catch {
+          case ex: Throwable =>
+            println(
+              s"[ERROR] notification-consumer record loop swallowed error offset=${record.offset()} partition=${record.partition()} reason=${ex.getMessage}"
+            )
+        }
       }
     }
   } catch {
@@ -53,18 +64,58 @@ object NotificationConsumerApp extends App {
       println("[INFO] notification-consumer stopped")
   } finally {
     consumer.close()
+    dlqPublisher.close()
   }
 
   private def processRecord(record: ConsumerRecord[String, String]): Unit = {
-    val result = Await.result(handler.handle(record.value()), 10.seconds)
+    val result = retry(record) {
+      Await.result(handler.handle(record.value()), 10.seconds)
+    }
 
     println(
       s"[INFO] notification-consumer handled offset=${record.offset()} partition=${record.partition()} eventKey=${record.key()} result=$result"
     )
 
+    result match {
+      case MalformedPayloadIgnored =>
+        publishToDlq(record, "MALFORMED_PAYLOAD", Some("JSON payload could not be parsed"))
+      case UnsupportedVersionIgnored =>
+        publishToDlq(record, "UNSUPPORTED_VERSION", Some(s"Supported version=${settings.supportedEventVersion}"))
+      case _ =>
+    }
+
     val nextOffset = new OffsetAndMetadata(record.offset() + 1)
     val partition = new TopicPartition(record.topic(), record.partition())
     consumer.commitSync(Map(partition -> nextOffset).asJava)
+  }
+
+  private def retry(record: ConsumerRecord[String, String])(thunk: => NotificationConsumerRecordResult): NotificationConsumerRecordResult = {
+    var attempt = 0
+    var lastError: Option[Throwable] = None
+
+    while (attempt < settings.maxRetries) {
+      try {
+        return thunk
+      } catch {
+        case ex: Throwable =>
+          attempt += 1
+          lastError = Some(ex)
+          println(
+            s"[WARN] notification-consumer attempt=$attempt/${settings.maxRetries} failed offset=${record.offset()} partition=${record.partition()} reason=${ex.getMessage}"
+          )
+          Thread.sleep(settings.retryBackoffMillis)
+      }
+    }
+
+    publishToDlq(record, "PROCESSING_FAILED", lastError.map(_.getMessage))
+    Processed
+  }
+
+  private def publishToDlq(record: ConsumerRecord[String, String], reason: String, errorMessage: Option[String]): Unit = {
+    dlqPublisher.publish(record, reason, errorMessage)
+    println(
+      s"[WARN] notification-consumer published offset=${record.offset()} partition=${record.partition()} to DLQ reason=$reason error=${errorMessage.getOrElse("-")}"
+    )
   }
 
   private def consumerProperties(settings: NotificationConsumerSettings): Properties = {

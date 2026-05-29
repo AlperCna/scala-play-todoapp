@@ -61,7 +61,10 @@ class AnalyticsEventProcessorSpec extends AnyWordSpec with Matchers with ScalaFu
       topic = "todo.events.v1",
       groupId = "analytics-group",
       consumerName = "todo-analytics-consumer",
+      dlqTopic = "todo.events.dlq.v1",
       supportedEventVersion = 1,
+      maxRetries = 3,
+      retryBackoffMillis = 250L,
       database = AnalyticsConsumerDatabaseSettings(
         driver = "driver",
         url = "url",

@@ -1,6 +1,6 @@
 package com.alper.todo.notificationconsumer.service
 
-import com.alper.todo.notificationconsumer.config.NotificationConsumerSettings
+import com.alper.todo.notificationconsumer.config.{NotificationConsumerDatabaseSettings, NotificationConsumerSettings}
 import com.alper.todo.notificationconsumer.model.NotificationDispatchMode.{Disabled, Sandbox}
 import com.alper.todo.notificationconsumer.model.NotificationProcessingResult._
 import com.alper.todo.notificationconsumer.model.{NotificationCommand, TodoEventEnvelope, TodoPayload}
@@ -26,8 +26,13 @@ class NotificationEventProcessorSpec extends AnyWordSpec with Matchers with Scal
           bootstrapServers = "localhost:9092",
           topic = "todo.events.v1",
           groupId = "todo-notification-consumer-v1",
+          consumerName = "todo-notification-consumer-v1",
+          dlqTopic = "todo.events.dlq.v1",
           dispatchMode = Sandbox,
-          supportedEventVersion = 1
+          supportedEventVersion = 1,
+          maxRetries = 3,
+          retryBackoffMillis = 250L,
+          database = NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")
         ),
         processedEventStore = store,
         notificationSender = sender,
@@ -48,7 +53,7 @@ class NotificationEventProcessorSpec extends AnyWordSpec with Matchers with Scal
       val store = new InMemoryProcessedEventStore(initialIds = Set(envelope.eventId))
       val sender = new CapturingNotificationSender()
       val processor = new NotificationEventProcessor(
-        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", Sandbox, 1),
+        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", "todo-notification-consumer-v1", "todo.events.dlq.v1", Sandbox, 1, 3, 250L, NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")),
         store,
         sender,
         new NotificationCommandFactory()
@@ -64,7 +69,7 @@ class NotificationEventProcessorSpec extends AnyWordSpec with Matchers with Scal
       val store = new InMemoryProcessedEventStore()
       val sender = new CapturingNotificationSender()
       val processor = new NotificationEventProcessor(
-        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", Sandbox, 1),
+        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", "todo-notification-consumer-v1", "todo.events.dlq.v1", Sandbox, 1, 3, 250L, NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")),
         store,
         sender,
         new NotificationCommandFactory()
@@ -80,7 +85,7 @@ class NotificationEventProcessorSpec extends AnyWordSpec with Matchers with Scal
       val store = new InMemoryProcessedEventStore()
       val sender = new CapturingNotificationSender()
       val processor = new NotificationEventProcessor(
-        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", Sandbox, 1),
+        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", "todo-notification-consumer-v1", "todo.events.dlq.v1", Sandbox, 1, 3, 250L, NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")),
         store,
         sender,
         new NotificationCommandFactory()
@@ -96,7 +101,7 @@ class NotificationEventProcessorSpec extends AnyWordSpec with Matchers with Scal
       val store = new InMemoryProcessedEventStore()
       val sender = new CapturingNotificationSender()
       val processor = new NotificationEventProcessor(
-        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", Disabled, 1),
+        NotificationConsumerSettings("localhost:9092", "todo.events.v1", "todo-notification-consumer-v1", "todo-notification-consumer-v1", "todo.events.dlq.v1", Disabled, 1, 3, 250L, NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")),
         store,
         sender,
         new NotificationCommandFactory()
@@ -148,7 +153,7 @@ class NotificationEventProcessorSpec extends AnyWordSpec with Matchers with Scal
     override def contains(eventId: UUID): Future[Boolean] =
       Future.successful(processed.contains(eventId))
 
-    override def markProcessed(eventId: UUID): Future[Unit] = Future.successful {
+    override def markProcessed(eventId: UUID, tenantId: UUID): Future[Unit] = Future.successful {
       processed = processed + eventId
     }
   }

@@ -16,7 +16,10 @@ object AuditConsumerSettingsLoader {
       topic = config.getString("topic"),
       groupId = config.getString("groupId"),
       consumerName = config.getString("consumerName"),
+      dlqTopic = config.getString("dlqTopic"),
       supportedEventVersion = config.getInt("supportedEventVersion"),
+      maxRetries = config.getInt("maxRetries"),
+      retryBackoffMillis = config.getLong("retryBackoffMillis"),
       database = AuditConsumerDatabaseSettings(
         driver = db.getString("driver"),
         url = db.getString("url"),

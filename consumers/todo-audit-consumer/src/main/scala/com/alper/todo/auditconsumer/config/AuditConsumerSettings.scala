@@ -12,6 +12,9 @@ case class AuditConsumerSettings(
   topic: String,
   groupId: String,
   consumerName: String,
+  dlqTopic: String,
   supportedEventVersion: Int,
+  maxRetries: Int,
+  retryBackoffMillis: Long,
   database: AuditConsumerDatabaseSettings
 )

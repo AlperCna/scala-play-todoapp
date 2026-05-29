@@ -31,7 +31,7 @@ class NotificationEventProcessor(
 
           for {
             _ <- notificationSender.send(command)
-            _ <- processedEventStore.markProcessed(envelope.eventId)
+            _ <- processedEventStore.markProcessed(envelope.eventId, envelope.tenantId)
           } yield Processed
         }
       }

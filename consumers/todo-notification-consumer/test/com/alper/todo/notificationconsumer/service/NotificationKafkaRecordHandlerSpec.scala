@@ -1,6 +1,6 @@
 package com.alper.todo.notificationconsumer.service
 
-import com.alper.todo.notificationconsumer.config.NotificationConsumerSettings
+import com.alper.todo.notificationconsumer.config.{NotificationConsumerDatabaseSettings, NotificationConsumerSettings}
 import com.alper.todo.notificationconsumer.model.NotificationConsumerRecordResult.{MalformedPayloadIgnored, Processed}
 import com.alper.todo.notificationconsumer.model.NotificationDispatchMode.Sandbox
 import com.alper.todo.notificationconsumer.ports.{NotificationSender, ProcessedEventStore}
@@ -26,8 +26,13 @@ class NotificationKafkaRecordHandlerSpec extends AnyWordSpec with Matchers with 
           bootstrapServers = "localhost:9092",
           topic = "todo.events.v1",
           groupId = "todo-notification-consumer-v1",
+          consumerName = "todo-notification-consumer-v1",
+          dlqTopic = "todo.events.dlq.v1",
           dispatchMode = Sandbox,
-          supportedEventVersion = 1
+          supportedEventVersion = 1,
+          maxRetries = 3,
+          retryBackoffMillis = 250L,
+          database = NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")
         ),
         processedEventStore = new InMemoryProcessedEventStoreStub(),
         notificationSender = new NoOpNotificationSender(),
@@ -50,8 +55,13 @@ class NotificationKafkaRecordHandlerSpec extends AnyWordSpec with Matchers with 
           bootstrapServers = "localhost:9092",
           topic = "todo.events.v1",
           groupId = "todo-notification-consumer-v1",
+          consumerName = "todo-notification-consumer-v1",
+          dlqTopic = "todo.events.dlq.v1",
           dispatchMode = Sandbox,
-          supportedEventVersion = 1
+          supportedEventVersion = 1,
+          maxRetries = 3,
+          retryBackoffMillis = 250L,
+          database = NotificationConsumerDatabaseSettings("driver", "url", "user", "pass")
         ),
         processedEventStore = new InMemoryProcessedEventStoreStub(),
         notificationSender = new NoOpNotificationSender(),
@@ -72,7 +82,7 @@ class NotificationKafkaRecordHandlerSpec extends AnyWordSpec with Matchers with 
     override def contains(eventId: UUID): Future[Boolean] =
       Future.successful(ids.contains(eventId))
 
-    override def markProcessed(eventId: UUID): Future[Unit] = Future.successful {
+    override def markProcessed(eventId: UUID, tenantId: UUID): Future[Unit] = Future.successful {
       ids = ids + eventId
       ()
     }

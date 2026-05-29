@@ -15,6 +15,7 @@ A Todo application built with Scala and Play Framework 2.9. The project now incl
 - [Kafka Phase 10](docs/kafka-phase-10.md)
 - [Kafka Phase 11](docs/kafka-phase-11.md)
 - [Kafka Phase 12](docs/kafka-phase-12.md)
+- [Kafka Phase 13](docs/kafka-phase-13.md)
 - [Kafka Local Runbook](docs/kafka-local-runbook.md)
 - [Kafka Rollout Checklist](docs/kafka-rollout-checklist.md)
 

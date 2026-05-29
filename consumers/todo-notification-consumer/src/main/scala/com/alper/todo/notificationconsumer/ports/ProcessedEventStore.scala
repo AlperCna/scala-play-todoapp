@@ -5,5 +5,5 @@ import scala.concurrent.Future
 
 trait ProcessedEventStore {
   def contains(eventId: UUID): Future[Boolean]
-  def markProcessed(eventId: UUID): Future[Unit]
+  def markProcessed(eventId: UUID, tenantId: UUID): Future[Unit]
 }
